@@ -144,7 +144,17 @@ body{
 .sync-online{background:#E0FFE8;color:#4A9E5C}.sync-offline{background:#F0E6D8;color:#8B7D72}
 .sync-bar{display:flex;align-items:center;gap:8px;padding:8px 18px;
   background:#fff;border-bottom:1px solid #F5EDE0;font-size:12px}
+
+.ocr-modal{max-height:70vh;overflow-y:auto}
+.ocr-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #F5EDE0;flex-wrap:wrap}
+.ocr-row input[type=text]{flex:1;min-width:70px;padding:6px 8px;border:1px solid #E0D5C0;border-radius:8px;font-size:13px}
+.ocr-row input[type=number]{width:60px;padding:6px 8px;border:1px solid #E0D5C0;border-radius:8px;font-size:13px}
+.ocr-row .ocr-raw{flex:0 0 100%;font-size:11px;color:#999;margin-bottom:4px}
+.ocr-row input[type=checkbox]{width:18px;height:18px;accent-color:#FF9800}
+.ocr-status{font-size:12px;color:#888;text-align:center;padding:8px}
+#ocrModal{display:none}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -217,6 +227,18 @@ body{
     <div class="sec-title mt-16">🏅 成就徽章</div>
     <div class="badge-grid" id="badgeGrid"></div>
     <button class="btn btn-ghost mt-16" onclick="closeLeague()">关闭</button>
+  </div>
+</div>
+
+<div class="modal-mask" id="ocrModal" onclick="cancelOCR(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="fw-700 mb-12" style="font-size:17px">📷 OCR 识别结果</div>
+    <div class="ocr-status" id="ocrStatus"></div>
+    <div class="ocr-modal" id="ocrList"></div>
+    <div class="flex gap-12 mt-16">
+      <button class="btn btn-ghost" onclick="cancelOCR()">取消</button>
+      <button class="btn btn-primary" onclick="confirmOCR()">录入选中项</button>
+    </div>
   </div>
 </div>
 
@@ -854,7 +876,7 @@ function renderPhotos(){
   var el=document.getElementById('photos');
   if(!el||!S.scanPhotos)return;
   el.innerHTML=S.scanPhotos.map(function(src,i){
-    return '<div class="photo-thumb" style="background:url('+src+')center/cover;position:relative"><span style="position:absolute;top:4px;right:6px;color:#fff;background:rgba(0,0,0,0.5);border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:12px;cursor:pointer" onclick="delPhoto('+i+')">✕</span><span style="position:absolute;bottom:4px;left:6px;background:rgba(76,175,80,0.85);color:#fff;padding:2px 6px;border-radius:8px;font-size:11px;cursor:pointer" onclick="photoToCourse('+i+')">✏️录入</span></div>';
+    return '<div class="photo-thumb" style="background:url('+src+')center/cover;position:relative"><span style="position:absolute;top:4px;right:6px;color:#fff;background:rgba(0,0,0,0.5);border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:12px;cursor:pointer" onclick="delPhoto('+i+')">✕</span><span style="position:absolute;bottom:4px;left:6px;background:rgba(33,150,243,0.85);color:#fff;padding:2px 6px;border-radius:8px;font-size:11px;cursor:pointer;margin-bottom:22px" onclick="scanOCR('+i+')">🔍扫描</span><span style="position:absolute;bottom:4px;left:6px;background:rgba(76,175,80,0.85);color:#fff;padding:2px 6px;border-radius:8px;font-size:11px;cursor:pointer" onclick="photoToCourse('+i+')">✏️录入</span></div>';
   }).join('');
 }
 function photoToCourse(i){
@@ -867,6 +889,57 @@ function photoToCourse(i){
 function delPhoto(i){
   S.scanPhotos.splice(i,1);
   renderPhotos();
+}
+function scanOCR(i){
+  var src=S.scanPhotos[i];
+  if(!src)return;
+  document.getElementById('ocrModal').style.display='flex';
+  document.getElementById('ocrStatus').textContent='正在识别中，请稍候...';
+  document.getElementById('ocrList').innerHTML='';
+  Tesseract.recognize(src,'chi_sim+eng',{
+    logger:function(m){if(m.status==='recognizing text'){document.getElementById('ocrStatus').textContent='正在识别: '+Math.round(m.progress*100)+'%';}}
+  }).then(function(res){
+    document.getElementById('ocrStatus').textContent='识别完成，共提取 '+res.data.words.length+' 个词。请核对并补全信息后录入。';
+    parseOCRText(res.data.text);
+  }).catch(function(e){
+    document.getElementById('ocrStatus').textContent='识别失败: '+e.message;
+    document.getElementById('ocrList').innerHTML='';
+  });
+}
+function parseOCRText(text){
+  var lines=text.split(/[\n\r]+/).map(function(l){return l.trim();}).filter(function(l){return l.length>1;});
+  if(lines.length===0){document.getElementById('ocrList').innerHTML='<div style="text-align:center;color:#999;padding:20px">未识别到文字</div>';return;}
+  S._ocrLines=lines.map(function(line,i){
+    var parts=line.split(/[\s\|,，;；、\t]+/).filter(function(p){return p.length>0;});
+    var subject=parts.length>=2?parts[0]:line;
+    var chapter=parts.length>=2?parts.slice(1).join(' '):'';
+    return {raw:line,subject:subject,chapter:chapter,checked:true};
+  });
+  renderOCRResults();
+}
+function renderOCRResults(){
+  var el=document.getElementById('ocrList');
+  el.innerHTML=S._ocrLines.map(function(item,i){
+    return '<div class="ocr-row"><div class="ocr-raw">原文: '+item.raw+'</div><input type="checkbox" '+(item.checked?'checked':'')+' onchange="S._ocrLines['+i+'].checked=this.checked"><input type="text" placeholder="科目" value="'+item.subject.replace(/"/g,'&quot;')+'" onchange="S._ocrLines['+i+'].subject=this.value"><input type="text" placeholder="章节" value="'+item.chapter.replace(/"/g,'&quot;')+'" onchange="S._ocrLines['+i+'].chapter=this.value"><input type="number" placeholder="时长(h)" min="0.5" step="0.5" value="1" onchange="S._ocrLines['+i+'].hours=parseFloat(this.value)||1"></div>';
+  }).join('');
+}
+function confirmOCR(){
+  var added=0;
+  S._ocrLines.forEach(function(item,i){
+    if(!item.checked||!item.subject||!item.chapter)return;
+    var h=item.hours||1;
+    S.lmList.push({id:'lm'+(S.tidCtr++),s:item.subject,ch:item.chapter,h:h});
+    added++;
+  });
+  S._ocrLines=[];
+  document.getElementById('ocrModal').style.display='none';
+  saveState();render();
+  alert('已录入 '+added+' 条课程');
+}
+function cancelOCR(e){
+  if(e&&e.target!==document.getElementById('ocrModal'))return;
+  S._ocrLines=[];
+  document.getElementById('ocrModal').style.display='none';
 }
 
 // ============ INIT ============
