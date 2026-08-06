@@ -540,6 +540,7 @@ function renderContent(){
   else if(_tab==='quest')c=renderQuest();
   else if(_tab==='history')c=renderHistory();
   document.getElementById('content').innerHTML=c;
+  if(_tab==='learn')setTimeout(renderPhotos,0);
 }
 
 function renderLearn(){
@@ -810,8 +811,44 @@ function editCH(id){
 function clearHistory(){
   if(confirm('确定清空所有历史记录？')){S.history=[];saveState();render();}
 }
-function scanCourse(){alert('拍照功能需在App中使用。PWA可通过文件上传实现。');}
-function choosePhoto(){alert('相册选择需在App中使用。PWA可通过文件上传实现。');}
+function scanCourse(){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.onchange=function(){
+    addPhotos(Array.from(inp.files));
+  };
+  inp.click();
+}
+function choosePhoto(){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=function(){
+    addPhotos(Array.from(inp.files));
+  };
+  inp.click();
+}
+function addPhotos(files){
+  if(!S.scanPhotos)S.scanPhotos=[];
+  files.forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(e){
+      S.scanPhotos.push(e.target.result);
+      renderPhotos();
+    };
+    r.readAsDataURL(f);
+  });
+}
+function renderPhotos(){
+  var el=document.getElementById('photos');
+  if(!el||!S.scanPhotos)return;
+  el.innerHTML=S.scanPhotos.map(function(src,i){
+    return '<div class="photo-thumb" style="background:url('+src+')center/cover;position:relative"><span style="position:absolute;top:4px;right:6px;color:#fff;background:rgba(0,0,0,0.5);border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:12px;cursor:pointer" onclick="delPhoto('+i+')">✕</span></div>';
+  }).join('');
+}
+function delPhoto(i){
+  S.scanPhotos.splice(i,1);
+  renderPhotos();
+}
 
 // ============ INIT ============
 loadState();initSync();checkDay();render();
