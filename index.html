@@ -557,7 +557,7 @@ function renderLearn(){
     html+='<div id="photos" class="photo-strip"></div>';
     html+='<div class="fs-12 text-sub">已录入 '+S.lmList.length+' 章</div>';
     S.lmList.forEach(function(item){
-      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><span class="tag tag-must">'+item.s+'</span><span class="flex-1">'+item.ch+'</span><span class="fs-12 text-sub">'+item.h+'h</span></div>';
+      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><span class="tag tag-must">'+item.s+'</span><span class="flex-1" style="cursor:pointer" onclick="editLm(\''+item.id+'\')" title="点击编辑">'+item.ch+' ✎</span><span class="fs-12 text-sub">'+item.h+'h</span><button class="btn-sm" style="background:#fee;color:#c33;padding:2px 8px;border-radius:8px;border:none;font-size:12px" onclick="delLm(\''+item.id+'\')">✕</button></div>';
     });
     html+='</div>';
   }
@@ -720,7 +720,19 @@ function addLmForm(){
   var s=prompt('科目名称', ''); if(!s)return;
   var ch=prompt('章节名称', ''); if(!ch)return;
   var h=parseFloat(prompt('预计时长(h)', '')); if(isNaN(h))return;
-  S.lmList.push({s:s,ch:ch,h:h});saveState();render();
+  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h});saveState();render();
+}
+function editLm(id){
+  var item=S.lmList.find(function(x){return x.id===id;});if(!item)return;
+  var s=prompt('科目名称',item.s);if(s!==null)item.s=s;
+  var ch=prompt('章节名称',item.ch);if(ch!==null)item.ch=ch;
+  var h=prompt('预计时长(h)',item.h);if(h!==null&&!isNaN(parseFloat(h)))item.h=parseFloat(h);
+  saveState();render();
+}
+function delLm(id){
+  if(!confirm('确定删除此章节？'))return;
+  S.lmList=S.lmList.filter(function(x){return x.id!==id;});
+  saveState();render();
 }
 function addWmForm(){
   var n=prompt('任务名称', ''); if(!n)return;
@@ -842,8 +854,15 @@ function renderPhotos(){
   var el=document.getElementById('photos');
   if(!el||!S.scanPhotos)return;
   el.innerHTML=S.scanPhotos.map(function(src,i){
-    return '<div class="photo-thumb" style="background:url('+src+')center/cover;position:relative"><span style="position:absolute;top:4px;right:6px;color:#fff;background:rgba(0,0,0,0.5);border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:12px;cursor:pointer" onclick="delPhoto('+i+')">✕</span></div>';
+    return '<div class="photo-thumb" style="background:url('+src+')center/cover;position:relative"><span style="position:absolute;top:4px;right:6px;color:#fff;background:rgba(0,0,0,0.5);border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:12px;cursor:pointer" onclick="delPhoto('+i+')">✕</span><span style="position:absolute;bottom:4px;left:6px;background:rgba(76,175,80,0.85);color:#fff;padding:2px 6px;border-radius:8px;font-size:11px;cursor:pointer" onclick="photoToCourse('+i+')">✏️录入</span></div>';
   }).join('');
+}
+function photoToCourse(i){
+  var s=prompt('科目名称','');if(!s)return;
+  var ch=prompt('章节名称','');if(!ch)return;
+  var h=parseFloat(prompt('预计时长(h)',''));if(isNaN(h))return;
+  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h});
+  saveState();render();
 }
 function delPhoto(i){
   S.scanPhotos.splice(i,1);
