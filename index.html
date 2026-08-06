@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#FFB380">
+<title>Work Buddy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  background:#FFF8E7;color:#4A3728;min-height:100vh;padding-bottom:160px;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+.header{
+  background:linear-gradient(135deg,#FFB380,#FFD1A9);
+  padding:20px 24px 36px;border-radius:0 0 36px 36px;
+  position:sticky;top:0;z-index:10;
+}
+.header-row{display:flex;justify-content:space-between;align-items:center}
+.app-title{font-size:22px;font-weight:700;color:#fff;letter-spacing:1px}
+.greeting{margin-top:12px;color:rgba(255,255,255,0.9);font-size:14px}
+.date-badge{display:inline-block;margin-top:8px;padding:4px 16px;
+  background:rgba(255,255,255,0.22);border-radius:20px;color:#fff;font-size:13px}
+.stats-row{display:flex;gap:8px;padding:0 18px;margin:-16px 0 16px}
+.stat-card{flex:1;background:#fff;border-radius:20px;padding:16px 12px;
+  text-align:center;box-shadow:0 3px 16px rgba(74,55,40,0.07)}
+.stat-num{font-size:28px;font-weight:700;color:#FFB380}
+.stat-label{font-size:12px;color:#8B7D72}
+.league-card{margin:-14px 18px 14px;background:#fff;border-radius:24px;padding:18px;
+  box-shadow:0 3px 16px rgba(74,55,40,0.07);display:flex;align-items:center;gap:14px}
+.lg-icon{font-size:36px}.lg-name{font-size:16px;font-weight:700}
+.lg-next{font-size:12px;color:#8B7D72}
+.lg-bar{height:6px;background:#F0E6D8;border-radius:3px;margin-top:6px;overflow:hidden}
+.lg-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#FFB380,#FFD700)}
+.lg-xp{font-size:13px;font-weight:700;color:#FF9633;white-space:nowrap}
+.xp-mini{display:flex;align-items:center;gap:12px;margin:0 18px 14px;font-size:12px}
+.xp-mini-bar{flex:1;height:8px;background:#F0E6D8;border-radius:4px;overflow:hidden}
+.xp-mini-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#FF9633,#FFD700)}
+.tabs{display:flex;gap:4px;padding:0 18px 10px;overflow-x:auto;white-space:nowrap}
+.tab{padding:10px 20px;border-radius:24px;background:rgba(255,255,255,0.6);
+  color:#8B7D72;font-size:14px;font-weight:500;cursor:pointer;flex-shrink:0;border:none}
+.tab.active{background:#FFB380;color:#fff;font-weight:700}
+.sec{padding:0 18px}
+.sec-title{font-size:18px;font-weight:700;margin:20px 0 14px;display:flex;align-items:center;gap:8px}
+.task{background:#fff;border-radius:20px;padding:18px;margin-bottom:10px;
+  box-shadow:0 3px 14px rgba(74,55,40,0.05);display:flex;align-items:center;gap:12px}
+.task.done{opacity:0.6}
+.task.done .t-title{text-decoration:line-through;color:#8B7D72}
+.t-check{width:40px;height:40px;border-radius:50%;border:3px solid #FFB380;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:0;cursor:pointer}
+.t-check.c{background:#7BC67E;border-color:#7BC67E;font-size:22px;color:#fff;font-weight:700}
+.t-info{flex:1}
+.t-title{font-size:15px;font-weight:600;line-height:1.4}
+.t-meta{font-size:12px;color:#8B7D72;margin-top:3px}
+.t-at{font-size:11px;color:#7BC67E}
+.tag{font-size:11px;font-weight:600;padding:4px 12px;border-radius:14px;flex-shrink:0}
+.tag-must{background:#FFE0CC;color:#E67A3A}.tag-opt{background:#E0F0FF;color:#5B9BD5}
+.tag-urgent{background:#FFE0E0;color:#D94A4A}.tag-work{background:#FFF0E0;color:#C4843A}
+.tag-life{background:#E0FFE8;color:#4A9E5C}
+.collapse-h{display:flex;justify-content:space-between;align-items:center;
+  padding:18px;background:#fff;border-radius:20px;box-shadow:0 3px 14px rgba(74,55,40,0.06);
+  margin-bottom:8px;cursor:pointer}
+.collapse-arrow{font-size:14px;color:#8B7D72;transition:transform .25s}
+.collapse-arrow.open{transform:rotate(90deg)}
+.collapse-body{background:#fff;border-radius:0 0 20px 20px;padding:0 18px 18px;
+  margin-top:-4px;margin-bottom:18px}
+.input{width:100%;padding:14px 16px;border-radius:16px;border:2px solid #E8DDD0;
+  font-size:14px;background:#FFFAF5;margin-bottom:10px;outline:none}
+.input:focus{border-color:#FFB380}
+.sel{padding:14px 16px;border-radius:16px;border:2px solid #E8DDD0;
+  font-size:14px;background:#FFFAF5;color:#4A3728}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.btn{padding:14px 24px;border-radius:20px;font-size:15px;font-weight:600;
+  text-align:center;border:none;cursor:pointer;width:100%}
+.btn-primary{background:#FFB380;color:#fff}
+.btn-outline{background:#fff;color:#FFB380;border:2px solid #FFB380}
+.btn-ghost{background:#F5EDE0;color:#4A3728}
+.btn-sm{padding:10px 20px;border-radius:18px;font-size:13px;font-weight:600;border:none;cursor:pointer}
+.btn-sm.primary{background:#FFB380;color:#fff}
+.btn-sm.outline{background:#fff;color:#FFB380;border:2px solid #FFB380}
+.btn-sm.ghost{background:#F5EDE0;color:#4A3728}
+.quest-item{display:flex;align-items:center;gap:12px;padding:16px 18px;
+  background:#fff;border-radius:18px;margin-bottom:8px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+.quest-icon{font-size:28px}.quest-name{font-size:14px;font-weight:600}
+.quest-prog{font-size:12px;color:#8B7D72}.quest-reward{font-size:12px;font-weight:700;color:#FF9633;white-space:nowrap}
+.quest-done{color:#7BC67E;font-size:26px}
+.badge-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.badge-item{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px}
+.badge-item.earned{background:linear-gradient(135deg,#FFE0B2,#FFCC80);box-shadow:0 3px 12px rgba(255,179,128,0.3)}
+.badge-item.locked{background:#F0E6D8;filter:grayscale(1);opacity:0.3}
+.h-item{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  background:#fff;border-radius:16px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.03)}
+.h-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.h-dot-l{background:#A8E6CF}.h-dot-w{background:#FFA94D}.h-dot-f{background:#FFD1DC}
+.tree-card{background:#fff;border-radius:24px;padding:28px;
+  box-shadow:0 3px 14px rgba(74,55,40,0.06);text-align:center;margin-top:20px}
+.tree-emoji{font-size:56px;margin:12px 0}
+.tree-bar{height:16px;background:#F0E6D8;border-radius:8px;overflow:hidden;margin:12px 0}
+.tree-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,#A8E6CF,#FFB380)}
+.tree-text{font-size:13px;color:#8B7D72}
+.summary-card{background:#fff;border-radius:20px;padding:20px;
+  box-shadow:0 3px 14px rgba(74,55,40,0.06);margin-bottom:18px;font-size:14px;line-height:1.7}
+.habit-row{display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid #F5EDE0}
+.habit-row:last-child{border-bottom:none}
+.habit-name{flex:1;font-size:14px;font-weight:600}
+.habit-cnt{display:flex;align-items:center;gap:10px}
+.habit-cnt button{width:40px;height:40px;border-radius:50%;border:2px solid #E8DDD0;
+  background:#fff;font-size:22px;color:#4A3728;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;padding:0}
+.cnt-val{font-size:22px;font-weight:700;min-width:36px;text-align:center}
+.fab{position:fixed;right:24px;bottom:32px;width:64px;height:64px;
+  border-radius:50%;background:linear-gradient(135deg,#FFB380,#FF8A65);
+  box-shadow:0 6px 24px rgba(255,138,101,0.5);display:flex;
+  align-items:center;justify-content:center;color:#fff;
+  font-size:36px;font-weight:700;z-index:999;cursor:pointer;border:none}
+.modal-mask{position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.45);z-index:9999;display:none;align-items:flex-end}
+.modal-mask.show{display:flex}
+.modal-sheet{width:100%;background:#fff;border-radius:32px 32px 0 0;
+  padding:24px 22px 32px;max-height:85vh;overflow-y:auto}
+.photo-strip{display:flex;gap:10px;padding:10px 0;overflow-x:auto}
+.photo-thumb{width:120px;height:150px;border-radius:12px;flex-shrink:0;
+  border:2px solid #E8DDD0;object-fit:cover}
+.w-full{width:100%}.mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}
+.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}
+.flex{display:flex}.flex-1{flex:1}.gap-8{gap:8px}.gap-12{gap:12px}
+.text-sub{color:#8B7D72}.text-orange{color:#FF9633}.text-green{color:#7BC67E}
+.fs-12{font-size:12px}.fs-13{font-size:13px}.fs-14{font-size:14px}.fs-18{font-size:18px}
+.fw-700{font-weight:700}.tac{text-align:center}
+.league-big{background:#fff;border-radius:24px;padding:28px;text-align:center;
+  box-shadow:0 3px 18px rgba(74,55,40,0.06);margin-bottom:16px}
+.league-big-icon{font-size:72px;margin-bottom:12px}
+.league-big-name{font-size:22px;font-weight:700}
+.league-big-next{font-size:13px;color:#8B7D72;margin-top:6px}
+.league-tier{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  background:#fff;border-radius:16px;margin-bottom:6px;box-shadow:0 2px 8px rgba(0,0,0,0.03)}
+.league-tier.locked{opacity:0.3}
+.sync-badge{padding:6px 12px;border-radius:12px;font-size:11px;font-weight:600}
+.sync-online{background:#E0FFE8;color:#4A9E5C}.sync-offline{background:#F0E6D8;color:#8B7D72}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 18px;
+  background:#fff;border-bottom:1px solid #F5EDE0;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="sync-bar" id="syncBar">
+  <span id="syncIcon" style="font-size:16px">☁️</span>
+  <span id="syncText">本地模式</span>
+  <span id="syncStatus" class="sync-badge sync-offline" style="margin-left:auto">仅本地</span>
+</div>
+
+<div class="header">
+  <div class="header-row">
+    <span class="app-title">🐻 Work Buddy</span>
+  </div>
+  <div class="greeting"><span id="greeting"></span></div>
+  <div class="date-badge" id="dateBadge"></div>
+</div>
+
+<div class="league-card" onclick="showLeague()">
+  <span class="lg-icon" id="lgIcon">⬜</span>
+  <div class="flex-1">
+    <span class="lg-name" id="lgName">未定级</span>
+    <div class="lg-next" id="lgNext"></div>
+    <div class="lg-bar"><div class="lg-fill" id="lgFill" style="width:0%"></div></div>
+  </div>
+  <span class="lg-xp" id="lgXp">0 XP</span>
+</div>
+
+<div id="xpMini" class="xp-mini"><span>⭐</span><div class="xp-mini-bar"><div class="xp-mini-fill" id="xpFill" style="width:0%"></div></div><span id="xpLabel">Lv.1</span></div>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="stat-num" id="doneNum">0</div><div class="stat-label">已完成</div></div>
+  <div class="stat-card"><div class="stat-num" id="totalNum">0</div><div class="stat-label">总任务</div></div>
+  <div class="stat-card"><div class="stat-num" id="streakNum">0</div><div class="stat-label">连续🔥</div></div>
+  <div class="stat-card"><div class="stat-num" id="gemsNum">0</div><div class="stat-label">💎宝石</div></div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="content"></div>
+
+<div class="fab" onclick="showQuickAdd()">+</div>
+
+<div class="modal-mask" id="qaModal" onclick="closeQuickAdd(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="fw-700 mb-12 tac" style="font-size:17px">🐻 快速添加任务</div>
+    <select id="qaMod" class="sel w-full mb-12">
+      <option value="0">📚 学习</option><option value="1">💼 工作</option>
+      <option value="2">🏠 生活</option><option value="3">💪 健身</option>
+    </select>
+    <input class="input" id="qaName" placeholder="任务名称">
+    <input class="input" id="qaMeta" placeholder="时长/说明（健身模块填分钟数）">
+    <div class="flex gap-12 mt-16">
+      <button class="btn btn-ghost" onclick="closeQuickAdd()">取消</button>
+      <button class="btn btn-primary" onclick="confirmQA()">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="leagueModal" onclick="closeLeague(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="fw-700 mb-16 tac" style="font-size:17px">🏆 联赛晋级</div>
+    <div class="league-big">
+      <div class="league-big-icon" id="bigLgIcon">⬜</div>
+      <div class="league-big-name" id="bigLgName">未定级</div>
+      <div class="league-big-next" id="bigLgNext"></div>
+      <div class="tree-bar mt-12"><div class="tree-fill" id="bigLgFill" style="width:0%"></div></div>
+      <div class="text-orange fw-700 mt-12">联赛经验 <span id="bigLgXp">0</span> XP</div>
+    </div>
+    <div id="allLeagues"></div>
+    <div class="sec-title mt-16">🏅 成就徽章</div>
+    <div class="badge-grid" id="badgeGrid"></div>
+    <button class="btn btn-ghost mt-16" onclick="closeLeague()">关闭</button>
+  </div>
+</div>
+
+<script>
+// ============ CONFIG ============
+// Set your Supabase URL and anon key to enable cloud sync.
+// Get them from https://supabase.com -> your project -> Settings -> API
+var SUPABASE_URL = 'https://gkznlwpdbtdazknhrlgo.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_nnMi6kteR-Ronp7k4g1k_g_r89bNSnY';
+var SUPABASE_ENABLED = false;
+var DEVICE_ID = '';
+
+// ============ STATE ============
+var DAYS = ['日','一','二','三','四','五','六'];
+var LEAGUES = [
+  {name:'未定级',icon:'⬜',xp:0},{name:'青铜联赛',icon:'🥉',xp:1},
+  {name:'白银联赛',icon:'🥈',xp:51},{name:'黄金联赛',icon:'🥇',xp:121},
+  {name:'蓝宝石联赛',icon:'💎',xp:251},{name:'红宝石联赛',icon:'🔴',xp:451},
+  {name:'钻石联赛',icon:'💠',xp:751},{name:'王者联赛',icon:'👑',xp:1201}
+];
+var BADGES = [
+  {id:'first',icon:'⭐',name:'首次打卡',cond:function(s){return s.lifetimeDone>=1},gems:1},
+  {id:'s7',icon:'🔥',name:'七日连击',cond:function(s){return s.streak>=7},gems:1},
+  {id:'s30',icon:'💎',name:'月度之星',cond:function(s){return s.streak>=30},gems:3},
+  {id:'t10',icon:'📚',name:'十项全能',cond:function(s){return s.lifetimeDone>=10},gems:1},
+  {id:'t50',icon:'🏆',name:'半百达人',cond:function(s){return s.lifetimeDone>=50},gems:3},
+  {id:'all',icon:'🌟',name:'全能选手',cond:function(s){return s.mDone.l&&s.mDone.w&&s.mDone.h&&s.mDone.f},gems:2}
+];
+var QUESTS = [
+  {id:'q1',icon:'📚',name:'完成1个学习任务',tgt:1,xp:20,gems:0,cat:'learn'},
+  {id:'q2',icon:'💼',name:'完成1个工作任务',tgt:1,xp:20,gems:0,cat:'work'},
+  {id:'q3',icon:'🏠',name:'完成1个生活任务',tgt:1,xp:15,gems:0,cat:'life'},
+  {id:'q4',icon:'🏃',name:'完成运动记录',tgt:1,xp:15,gems:0,cat:'fitness'},
+  {id:'q5',icon:'✅',name:'完成3个任意任务',tgt:3,xp:30,gems:1,cat:'any'},
+  {id:'q6',icon:'💧',name:'喝满8杯水',tgt:8,xp:10,gems:0,cat:'water'}
+];
+
+var S = {
+  tidCtr:60,learn:[],work:[],life:[],
+  lmList:[],wmList:[],hmList:[],hobbies:[],customHabits:[],
+  history:[],weight:[],exer:[],
+  xp:0,level:1,streak:0,lifetimeDone:0,lifetimeXP:0,gems:0,
+  lxp:0,lastDay:'',mDone:{l:false,w:false,h:false,f:false},
+  earned:{},
+  habits:{poop:0,water:0},
+  qProg:{},qDoneD:{},qDoneW:{}
+};
+var _tab = 'learn';
+var _collapses = {lm:false,wm:false,hm:false};
+
+function initDefaults(){
+  S.learn = [
+    {id:'l1',title:'民法-合同编总论',meta:'专业课|预计2h',tag:'tag-must',done:false,at:''},
+    {id:'l2',title:'英语阅读2篇+生词整理',meta:'英语|预计1.5h',tag:'tag-must',done:false,at:''},
+    {id:'l3',title:'政治-史纲时间线梳理',meta:'政治|预计1h',tag:'tag-opt',done:false,at:''}
+  ];
+  S.work = [
+    {id:'w1',title:'请拨单处理：志愿服务经费',meta:'财务|截止8/6',tag:'tag-work',done:false,at:''},
+    {id:'w2',title:'收文[2026]38号回复草拟',meta:'党建|截止8/7',tag:'tag-urgent',done:false,at:''}
+  ];
+  S.life = [
+    {id:'h1',title:'整理书桌',meta:'每日',tag:'tag-life',done:false,at:''},
+    {id:'h2',title:'扫地拖地',meta:'每日',tag:'tag-life',done:false,at:''}
+  ];
+  S.lmList = [
+    {s:'民法',ch:'合同编总论',h:10},{s:'英语',ch:'词汇核心2000词',h:40},{s:'政治',ch:'马原第1-4章',h:12}
+  ];
+  S.wmList = [
+    {name:'请拨单：志愿服务经费',dl:'8/6',p:'urgent'},
+    {name:'收文[2026]38号回复',dl:'8/7',p:'urgent'}
+  ];
+  S.hmList = [
+    {name:'整理书桌',f:'每日',c:'清洁'},{name:'洗衣',f:'每周三',c:'清洁'}
+  ];
+}
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem('wb_state_v4');
+    if(raw){
+      var s = JSON.parse(raw);
+      // Merge into S (keep defaults for missing keys)
+      Object.keys(s).forEach(function(k){S[k]=s[k];});
+    }else{initDefaults();}
+  }catch(e){initDefaults();}
+}
+function saveState(){
+  localStorage.setItem('wb_state_v4',JSON.stringify(S));
+  syncToCloud();
+}
+function checkDay(){
+  var today = new Date().toDateString();
+  if(S.lastDay!==today){
+    S.lastDay = today;
+    S.qProg = {}; S.qDoneD = {};
+    S.habits = {poop:0,water:0}; S.exer = [];
+    S.learn.forEach(function(t){t.done=false;t.at='';});
+    S.work.forEach(function(t){t.done=false;t.at='';});
+    S.life.forEach(function(t){t.done=false;t.at='';});
+    saveState();
+  }
+}
+
+// ============ Supabase Sync ============
+function initSync(){
+  DEVICE_ID = localStorage.getItem('wb_device_id');
+  if(!DEVICE_ID){DEVICE_ID='d_'+Math.random().toString(36).substr(2,9);localStorage.setItem('wb_device_id',DEVICE_ID);}
+  if(SUPABASE_URL && SUPABASE_KEY){
+    SUPABASE_ENABLED = true;
+    updateSyncUI();
+    loadFromCloud();
+  }
+}
+function updateSyncUI(){
+  if(SUPABASE_ENABLED){
+    document.getElementById('syncIcon').textContent='☁️';
+    document.getElementById('syncText').textContent='云同步已启用';
+    document.getElementById('syncStatus').textContent='在线';
+    document.getElementById('syncStatus').className='sync-badge sync-online';
+  }
+}
+function syncToCloud(){
+  if(!SUPABASE_ENABLED) return;
+  var payload = {device_id:DEVICE_ID,data:JSON.stringify(S),updated_at:new Date().toISOString()};
+  fetch(SUPABASE_URL+'/rest/v1/user_data',{
+    method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+    body:JSON.stringify([payload])
+  }).catch(function(){});
+}
+function loadFromCloud(){
+  if(!SUPABASE_ENABLED) return;
+  fetch(SUPABASE_URL+'/rest/v1/user_data?select=*&order=updated_at.desc&limit=1',{
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+  }).then(function(r){return r.json();}).then(function(rows){
+    if(rows.length>0){
+      try{
+        var remote = JSON.parse(rows[0].data);
+        var localTs = S.lastDay ? new Date(S.lastDay).getTime() : 0;
+        var remoteTs = new Date(rows[0].updated_at).getTime();
+        if(remoteTs > localTs){
+          Object.keys(remote).forEach(function(k){S[k]=remote[k];});
+          saveState();
+          document.getElementById('syncText').textContent='已从云端同步最新数据';
+          setTimeout(function(){updateSyncUI();},2000);
+        }
+      }catch(e){}
+    }
+  }).catch(function(err){console.log('Sync load failed:',err);});
+}
+
+// ============ HELPERS ============
+function fmtDate(){
+  var d=new Date();
+  return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日·周'+DAYS[d.getDay()];
+}
+function fmtTime(){
+  var d=new Date();
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function getLeague(){
+  for(var i=LEAGUES.length-1;i>=0;i--){
+    if(S.lxp>=LEAGUES[i].xp) return {cur:LEAGUES[i],idx:i,next:i<LEAGUES.length-1?LEAGUES[i+1]:null};
+  }
+  return {cur:LEAGUES[0],idx:0,next:LEAGUES[1]};
+}
+function addXP(pts){
+  S.xp+=pts;S.lifetimeXP+=pts;S.lxp+=pts;
+  var need=S.level*100;
+  if(S.xp>=need && S.level<7){S.xp-=need;S.level++;S.gems+=S.level;showToast('升级！Lv.'+S.level);}
+  checkBadges();
+  saveState();
+}
+function checkBadges(){
+  BADGES.forEach(function(b){
+    if(!S.earned[b.id] && b.cond(S)){
+      S.earned[b.id]=true;S.gems+=b.gems;
+      showToast('解锁成就：'+b.name+'！');
+    }
+  });
+}
+
+function showToast(msg){
+  var el=document.createElement('div');
+  el.textContent=msg;
+  el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;z-index:99999;pointer-events:none';
+  document.body.appendChild(el);
+  setTimeout(function(){el.remove();},2000);
+}
+
+// ============ TASK TOGGLE ============
+function toggleLearn(idx){
+  var t=S.learn[idx];
+  t.done=!t.done;
+  if(t.done){t.at=fmtTime();S.lifetimeDone++;S.streak++;S.mDone.l=true;S.history.unshift({title:t.title,cat:'l',time:t.at});addXP(10);}
+  else{t.at='';S.lifetimeDone=Math.max(0,S.lifetimeDone-1);S.streak=Math.max(0,S.streak-1);}
+  saveState();render();
+}
+function toggleWork(idx){
+  var t=S.work[idx];
+  t.done=!t.done;
+  if(t.done){t.at=fmtTime();S.lifetimeDone++;S.streak++;S.mDone.w=true;S.history.unshift({title:t.title,cat:'w',time:t.at});addXP(10);}
+  else{t.at='';S.lifetimeDone=Math.max(0,S.lifetimeDone-1);S.streak=Math.max(0,S.streak-1);}
+  saveState();render();
+}
+function toggleLife(idx){
+  var t=S.life[idx];
+  t.done=!t.done;
+  if(t.done){t.at=fmtTime();S.lifetimeDone++;S.streak++;S.mDone.h=true;S.history.unshift({title:t.title,cat:'h',time:t.at});addXP(10);}
+  else{t.at='';S.lifetimeDone=Math.max(0,S.lifetimeDone-1);S.streak=Math.max(0,S.streak-1);}
+  saveState();render();
+}
+
+// ============ QUICK ADD ============
+function showQuickAdd(){document.getElementById('qaModal').classList.add('show');}
+function closeQuickAdd(e){
+  if(e && e.target!==document.getElementById('qaModal')) return;
+  document.getElementById('qaModal').classList.remove('show');
+}
+function confirmQA(){
+  var mod=parseInt(document.getElementById('qaMod').value);
+  var name=document.getElementById('qaName').value.trim();
+  var meta=document.getElementById('qaMeta').value.trim();
+  if(!name){showToast('请输入任务名称');return;}
+  if(mod===3){
+    S.exer.push({name:name,dur:parseInt(meta)||30,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+    S.mDone.f=true;addXP(3);
+  }else if(mod===0){
+    S.learn.push({id:'t'+(S.tidCtr++),title:name,meta:meta||'手动添加',tag:'tag-must',done:false,at:''});
+  }else if(mod===1){
+    S.work.push({id:'t'+(S.tidCtr++),title:name,meta:meta||'手动添加',tag:'tag-work',done:false,at:''});
+  }else{
+    S.life.push({id:'t'+(S.tidCtr++),title:name,meta:meta||'手动添加',tag:'tag-life',done:false,at:''});
+  }
+  document.getElementById('qaName').value='';document.getElementById('qaMeta').value='';
+  closeQuickAdd();saveState();render();
+}
+
+// ============ LEAGUE MODAL ============
+function showLeague(){renderLeagueModal();document.getElementById('leagueModal').classList.add('show');}
+function closeLeague(e){
+  if(e && e.target!==document.getElementById('leagueModal')) return;
+  document.getElementById('leagueModal').classList.remove('show');
+}
+function renderLeagueModal(){
+  var lg=getLeague();
+  var pct=lg.next?Math.min(100,Math.round((S.lxp-lg.cur.xp)/(lg.next.xp-lg.cur.xp)*100)):100;
+  document.getElementById('bigLgIcon').textContent=lg.cur.icon;
+  document.getElementById('bigLgName').textContent=lg.cur.name;
+  document.getElementById('bigLgNext').innerHTML=lg.next?'距 '+lg.next.icon+' '+lg.next.name+' 还需 '+(lg.next.xp-S.lxp)+' XP':'已达最高段位！';
+  document.getElementById('bigLgFill').style.width=pct+'%';
+  document.getElementById('bigLgXp').textContent=S.lxp;
+  // All leagues
+  var html='';
+  LEAGUES.forEach(function(l){
+    var reached=S.lxp>=l.xp;
+    html+='<div class="league-tier'+(reached?'':' locked')+'">'+
+      '<span style="font-size:32px">'+l.icon+'</span><div class="flex-1">'+
+      '<span class="fw-700">'+l.name+'</span><span class="fs-12 text-sub" style="display:block">需 '+l.xp+' XP</span>'+
+      '</div>'+(reached?'<span class="text-green fw-700 fs-18">✓</span>':'')+'</div>';
+  });
+  document.getElementById('allLeagues').innerHTML=html;
+  // Badges
+  var bhtml='';
+  BADGES.forEach(function(b){
+    bhtml+='<div class="badge-item '+(S.earned[b.id]?'earned':'locked')+'">'+b.icon+'</div>';
+  });
+  document.getElementById('badgeGrid').innerHTML=bhtml;
+}
+
+// ============ RENDER ============
+function render(){
+  checkDay();
+  var h=new Date().getHours();
+  var g=h<12?'早上好':h<14?'中午好':h<18?'下午好':'晚上好';
+  var all=S.learn.concat(S.work).concat(S.life);
+  var done=all.filter(function(t){return t.done;}).length;
+  var total=all.length;
+  var treePct=total>0?Math.round(done/total*100):0;
+
+  document.getElementById('greeting').textContent=g+'！'+(total-done>0?'还有 '+(total-done)+' 项未完成':'今日任务已全部完成');
+  document.getElementById('dateBadge').textContent=fmtDate();
+  document.getElementById('doneNum').textContent=done;
+  document.getElementById('totalNum').textContent=total;
+  document.getElementById('streakNum').textContent=S.streak;
+  document.getElementById('gemsNum').textContent=S.gems;
+
+  var lg=getLeague();
+  var lPct=lg.next?Math.min(100,Math.round((S.lxp-lg.cur.xp)/(lg.next.xp-lg.cur.xp)*100)):100;
+  document.getElementById('lgIcon').textContent=lg.cur.icon;
+  document.getElementById('lgName').textContent=lg.cur.name;
+  document.getElementById('lgNext').innerHTML=lg.next?'距 '+lg.next.icon+' '+lg.next.name+' 还需 '+(lg.next.xp-S.lxp)+' XP':'已达最高段位！';
+  document.getElementById('lgFill').style.width=lPct+'%';
+  document.getElementById('lgXp').textContent=S.lxp+' XP';
+
+  var xpPct=Math.min(100,Math.round(S.xp/(S.level*100)*100));
+  document.getElementById('xpFill').style.width=xpPct+'%';
+  document.getElementById('xpLabel').textContent='Lv.'+S.level+'|'+S.xp+'/'+(S.level*100);
+
+  renderTabs();
+  renderContent();
+}
+function renderTabs(){
+  var tabs=[
+    {key:'learn',icon:'📚',name:'学习'},{key:'work',icon:'💼',name:'工作'},
+    {key:'life',icon:'🏠',name:'生活'},{key:'fitness',icon:'💪',name:'健身'},
+    {key:'quest',icon:'🎯',name:'每日'},{key:'history',icon:'📋',name:'历史'}
+  ];
+  var html='';
+  tabs.forEach(function(t){
+    html+='<button class="tab'+(t.key===_tab?' active':'')+'" onclick="_tab=\''+t.key+'\';render()">'+t.icon+' '+t.name+'</button>';
+  });
+  document.getElementById('tabs').innerHTML=html;
+}
+function renderContent(){
+  var c='';
+  if(_tab==='learn')c=renderLearn();
+  else if(_tab==='work')c=renderWork();
+  else if(_tab==='life')c=renderLife();
+  else if(_tab==='fitness')c=renderFitness();
+  else if(_tab==='quest')c=renderQuest();
+  else if(_tab==='history')c=renderHistory();
+  document.getElementById('content').innerHTML=c;
+}
+
+function renderLearn(){
+  var html='<div class="sec">';
+  html+='<div class="collapse-h" onclick="_collapses.lm=!_collapses.lm;render()"><span>📋 总课表管理</span><span class="collapse-arrow'+(S.collapses&&S.collapses.lm?' open':'')+'">▶</span></div>';
+  if(_collapses.lm){
+    html+='<div class="collapse-body">';
+    html+='<button class="btn-sm primary w-full mb-8" onclick="addLmForm()">+ 手动添加章节</button>';
+    html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
+    html+='<div id="photos" class="photo-strip"></div>';
+    html+='<div class="fs-12 text-sub">已录入 '+S.lmList.length+' 章</div>';
+    S.lmList.forEach(function(item){
+      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><span class="tag tag-must">'+item.s+'</span><span class="flex-1">'+item.ch+'</span><span class="fs-12 text-sub">'+item.h+'h</span></div>';
+    });
+    html+='</div>';
+  }
+  html+='<div class="sec-title">🌱 今日学习</div>';
+  S.learn.forEach(function(t,i){
+    html+='<div class="task'+(t.done?' done':'')+'">'+
+      '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleLearn('+i+')">✓</div>'+
+      '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':'')+'</div>'+
+      '<span class="tag '+t.tag+'">'+(t.tl||'待办')+'</span></div>';
+  });
+  html+='<div class="tree-card"><div class="tree-emoji">'+(treePct>=100?'🌳':treePct>=60?'🌲':treePct>=30?'🪴':'🌱')+'</div>'+
+    '<div class="tree-bar"><div class="tree-fill" style="width:'+treePct+'%"></div></div>'+
+    '<div class="tree-text">'+(treePct>=100?'全部完成！':treePct>=60?'做得不错':treePct>=30?'稳步前进中':'开始第一项吧')+'</div></div>';
+  html+='</div>';
+  return html;
+}
+
+function renderWork(){
+  var html='<div class="sec">';
+  html+='<div class="collapse-h" onclick="_collapses.wm=!_collapses.wm;render()"><span>📋 工作总任务池</span><span class="collapse-arrow'+(S.collapses&&S.collapses.wm?' open':'')+'">▶</span></div>';
+  if(_collapses.wm){
+    html+='<div class="collapse-body">';
+    html+='<button class="btn-sm primary w-full mb-8" onclick="addWmForm()">+ 添加工作任务</button>';
+    html+='<div class="fs-12 text-sub">已列入 '+S.wmList.length+' 项</div>';
+    S.wmList.forEach(function(item){
+      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><span class="tag tag-urgent">'+item.p+'</span><span class="flex-1">'+item.name+'</span>'+(item.dl?'<span class="fs-12 text-sub">截止 '+item.dl+'</span>':'')+'</div>';
+    });
+    html+='</div>';
+  }
+  html+='<div class="sec-title">📋 今日工作任务</div>';
+  S.work.forEach(function(t,i){
+    html+='<div class="task'+(t.done?' done':'')+'">'+
+      '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleWork('+i+')">✓</div>'+
+      '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':'')+'</div>'+
+      '<span class="tag '+t.tag+'">'+(t.tl||'待办')+'</span></div>';
+  });
+  html+='<div class="sec-title">📊 工作汇总</div>';
+  html+='<div class="flex gap-8 mb-8"><button class="btn-sm primary" onclick="genSummary(\'week\')">本周</button><button class="btn-sm outline" onclick="genSummary(\'month\')">本月</button><button class="btn-sm outline" onclick="genSummary(\'quarter\')">季度</button><button class="btn-sm outline" onclick="genSummary(\'half\')">半年</button></div>';
+  html+='<div id="summaryArea"></div>';
+  html+='</div>';
+  return html;
+}
+
+function genSummary(period){
+  var done=S.history.filter(function(h){return h.cat==='w';});
+  var html='<div class="summary-card"><div class="fw-700 mb-8">'+period+'工作汇总</div>';
+  html+='<div>已完成：'+done.length+' 项</div>';
+  html+='<div class="mt-8 fw-700">完成情况：</div>';
+  done.slice(0,5).forEach(function(h){
+    html+='<div>✓ '+h.title+' <span class="fs-12 text-sub">'+h.time+'</span></div>';
+  });
+  html+='<div class="mt-8 fw-700">存在问题：</div><div>请根据实际情况补充</div>';
+  html+='<div class="mt-8 fw-700">下一步计划：</div><div>待补充</div>';
+  html+='</div>';
+  document.getElementById('summaryArea').innerHTML=html;
+}
+
+function renderLife(){
+  var html='<div class="sec">';
+  html+='<div class="collapse-h" onclick="_collapses.hm=!_collapses.hm;render()"><span>📋 生活总任务池</span><span class="collapse-arrow'+(S.collapses&&S.collapses.hm?' open':'')+'">▶</span></div>';
+  if(_collapses.hm){
+    html+='<div class="collapse-body">';
+    html+='<button class="btn-sm primary w-full mb-8" onclick="addHmForm()">+ 添加生活任务</button>';
+    html+='<div class="fs-12 text-sub">已列入 '+S.hmList.length+' 项</div>';
+    S.hmList.forEach(function(item){
+      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><span class="tag tag-life">'+item.c+'</span><span class="flex-1">'+item.name+'</span><span class="fs-12 text-sub">'+item.f+'</span></div>';
+    });
+    html+='</div>';
+  }
+  html+='<div class="sec-title">🏠 今日生活</div>';
+  S.life.forEach(function(t,i){
+    html+='<div class="task'+(t.done?' done':'')+'">'+
+      '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleLife('+i+')">✓</div>'+
+      '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':'')+'</div>'+
+      '<span class="tag '+t.tag+'">'+(t.tl||'待办')+'</span></div>';
+  });
+  html+='<div class="sec-title">🎯 习惯爱好培养</div>';
+  html+='<div style="background:#fff;border-radius:20px;padding:18px;box-shadow:0 3px 14px rgba(74,55,40,0.06)">';
+  if(S.hobbies.length===0)html+='<div class="fs-12 text-sub tac" style="padding:16px">暂无习惯/爱好</div>';
+  S.hobbies.forEach(function(h){
+    html+='<div class="habit-row"><span class="habit-name">'+h.name+'</span><div class="habit-cnt">'+
+      '<button onclick="adjHobby(\''+h.id+'\',-1)">−</button><span class="cnt-val">'+h.cnt+'</span>'+
+      '<button onclick="adjHobby(\''+h.id+'\',1)">+</button></div><span class="fs-12 text-sub">次</span></div>';
+  });
+  html+='</div><button class="btn-sm outline w-full mt-8" onclick="addHobby()">+ 添加习惯/爱好</button>';
+  html+='<div class="sec-title">🏅 成就徽章</div><div class="badge-grid">';
+  BADGES.forEach(function(b){
+    html+='<div class="badge-item '+(S.earned[b.id]?'earned':'locked')+'">'+b.icon+'</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+function renderFitness(){
+  var html='<div class="sec">';
+  html+='<div class="sec-title">📏 身体数据</div>';
+  html+='<div class="summary-card"><div class="row mb-8"><input class="input" id="inHeight" type="number" placeholder="身高(cm)"><input class="input" id="inWeight" type="number" placeholder="体重(kg)"></div>';
+  html+='<button class="btn-sm primary w-full" onclick="addWeight()">记录体重</button>';
+  if(S.weight.length>0){
+    html+='<div class="mt-12">';
+    S.weight.forEach(function(r,i){
+      var diff=i===0?'--':((r.diff>0?'+':'')+r.diff+'kg');
+      var dc=i===0?'#8B7D72':(r.diff<0?'#7BC67E':'#FF6B6B');
+      html+='<div class="flex mb-6" style="align-items:center;font-size:12px;border-bottom:1px solid #F5EDE0;padding:8px 0"><span style="width:80px">'+r.date+'</span><span class="fw-700" style="width:80px">'+r.w+'kg</span><span style="width:80px">BMI '+(r.bmi||'-')+'</span><span style="color:'+dc+'">'+diff+'</span></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  html+='<div class="sec-title">🏃 今日运动</div><div class="summary-card">';
+  html+='<div class="row mb-8"><input class="input" id="inEx" placeholder="运动方式"><input class="input" id="inDur" type="number" placeholder="分钟"></div>';
+  html+='<button class="btn-sm primary w-full" onclick="addExer()">+ 记录运动</button>';
+  var totEx=0;S.exer.forEach(function(e){totEx+=e.dur;});
+  if(totEx>0)html+='<div class="fw-700 mt-12" style="color:#FFD1DC">合计 '+totEx+' 分钟</div>';
+  S.exer.forEach(function(e){
+    html+='<div class="flex mt-8" style="align-items:center;font-size:13px;border-bottom:1px solid #F5EDE0;padding:8px 0"><span class="fw-700 flex-1">'+e.name+'</span><span class="text-sub">'+e.dur+'分钟</span><span class="text-sub" style="margin-left:12px">'+e.time+'</span></div>';
+  });
+  html+='</div>';
+  html+='<div class="sec-title">📋 生活习惯</div><div class="summary-card">';
+  html+='<div class="habit-row"><span class="habit-name">🚽 排便</span><div class="habit-cnt"><button onclick="adjHabit(\'poop\',-1)">−</button><span class="cnt-val">'+(S.habits.poop||0)+'</span><button onclick="adjHabit(\'poop\',1)">+</button></div><span class="fs-12 text-sub">次</span></div>';
+  html+='<div class="habit-row"><span class="habit-name">💧 喝水</span><div class="habit-cnt"><button onclick="adjHabit(\'water\',-1)">−</button><span class="cnt-val">'+(S.habits.water||0)+'</span><button onclick="adjHabit(\'water\',1)">+</button></div><span class="fs-12 text-sub">杯(目标8杯)</span></div>';
+  S.customHabits.forEach(function(ch){
+    html+='<div class="habit-row"><span class="habit-name">'+ch.name+'</span><div class="habit-cnt"><button onclick="adjCH(\''+ch.id+'\',-1)">−</button><span class="cnt-val">'+ch.cnt+'</span><button onclick="adjCH(\''+ch.id+'\',1)">+</button></div><span class="fs-12 text-sub">'+ch.unit+'</span></div>';
+  });
+  html+='<button class="btn-sm outline w-full mt-8" onclick="addCustomHabit()">+ 自定义习惯</button>';
+  html+='</div></div>';
+  return html;
+}
+
+function renderQuest(){
+  var html='<div class="sec"><div class="sec-title">🎯 每日任务</div><div class="fs-12 text-sub mb-12">每日0:00重置·完成后自动获得XP+💎</div>';
+  QUESTS.forEach(function(q){
+    var done=!!S.qDoneD[q.id];
+    var prog=0;
+    if(q.cat==='water')prog=S.habits.water||0;
+    else prog=S.qProg[q.id]||0;
+    prog=Math.min(prog,q.tgt);
+    html+='<div class="quest-item"><span class="quest-icon">'+q.icon+'</span><div class="flex-1"><span class="quest-name">'+q.name+'</span>'+(done?'':'<span class="quest-prog">'+prog+'/'+q.tgt+'</span>')+'</div>';
+    html+='<span class="quest-reward">+'+q.xp+'XP'+(q.gems>0?' +'+q.gems+'💎':'')+'</span>';
+    if(done)html+='<span class="quest-done">✓</span>';
+    html+='</div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+function renderHistory(){
+  var html='<div class="sec"><div class="sec-title">📋 完成历史</div>';
+  if(S.history.length===0)html+='<div class="text-sub fs-14 tac" style="padding:40px">暂无完成记录</div>';
+  S.history.forEach(function(h){
+    html+='<div class="h-item"><div class="h-dot h-dot-'+h.cat+'"></div><div class="flex-1"><span class="fw-700" style="font-size:14px">'+h.title+'</span></div><span class="fs-12 text-sub">'+h.time+'</span></div>';
+  });
+  if(S.history.length>0)html+='<button class="btn-sm ghost w-full mt-12" onclick="clearHistory()">清空历史</button>';
+  html+='</div>';
+  return html;
+}
+
+// ============ ACTIONS ============
+function addLmForm(){
+  var s=prompt('科目名称', ''); if(!s)return;
+  var ch=prompt('章节名称', ''); if(!ch)return;
+  var h=parseFloat(prompt('预计时长(h)', '')); if(isNaN(h))return;
+  S.lmList.push({s:s,ch:ch,h:h});saveState();render();
+}
+function addWmForm(){
+  var n=prompt('任务名称', ''); if(!n)return;
+  var dl=prompt('截止日期(如8/6)', '');
+  var p=confirm('是否紧急？')?'urgent':'normal';
+  S.wmList.push({name:n,dl:dl,p:p});
+  S.work.push({id:'t'+(S.tidCtr++),title:n,meta:(dl?'截止'+dl+'·':'')+'来自总任务池',tag:p==='urgent'?'tag-urgent':'tag-work',done:false,at:''});
+  saveState();render();
+}
+function addHmForm(){
+  var n=prompt('任务名称', ''); if(!n)return;
+  var f=prompt('频率(每日/每周/每月/一次性)', '每日');
+  var c=prompt('分类(清洁/采购/健康/其他)', '清洁');
+  S.hmList.push({name:n,f:f,c:c});
+  S.life.push({id:'t'+(S.tidCtr++),title:n,meta:f, tag:'tag-life',done:false,at:''});
+  saveState();render();
+}
+function addWeight(){
+  var w=parseFloat(document.getElementById('inWeight').value);
+  var h=parseFloat(document.getElementById('inHeight').value);
+  if(isNaN(w)||w<=0){showToast('请输入有效体重');return;}
+  var d=new Date();var dt=(d.getMonth()+1)+'/'+d.getDate();
+  var bmi=isNaN(h)?'':(w/Math.pow(h/100,2)).toFixed(1);
+  var prev=S.weight.length>0?S.weight[S.weight.length-1].w:w;
+  S.weight.push({date:dt,w:w,bmi:bmi,diff:(w-prev).toFixed(1)});
+  addXP(3);saveState();render();
+}
+function addExer(){
+  var n=document.getElementById('inEx').value.trim();
+  var d=parseInt(document.getElementById('inDur').value);
+  if(!n||!d){showToast('请输入运动方式和时长');return;}
+  S.exer.push({name:n,dur:d,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+  S.mDone.f=true;addXP(5);saveState();render();
+}
+function adjHabit(id,d){
+  S.habits[id]=Math.max(0,(S.habits[id]||0)+d);saveState();render();
+}
+function adjHobby(id,d){
+  S.hobbies.forEach(function(h){if(h.id===id)h.cnt=Math.max(0,h.cnt+d);});
+  saveState();render();
+}
+function adjCH(id,d){
+  S.customHabits.forEach(function(ch){if(ch.id===id)ch.cnt=Math.max(0,ch.cnt+d);});
+  saveState();render();
+}
+function addHobby(){
+  var n=prompt('习惯/爱好名称','');if(!n)return;
+  S.hobbies.push({id:'hb'+(S.tidCtr++),name:n,cnt:0});saveState();render();
+}
+function addCustomHabit(){
+  var n=prompt('习惯名称','');if(!n)return;
+  var u=prompt('单位(如:次)','次')||'次';
+  S.customHabits.push({id:'ch'+(S.tidCtr++),name:n,unit:u,cnt:0});saveState();render();
+}
+function clearHistory(){
+  if(confirm('确定清空所有历史记录？')){S.history=[];saveState();render();}
+}
+function scanCourse(){alert('拍照功能需在App中使用。PWA可通过文件上传实现。');}
+function choosePhoto(){alert('相册选择需在App中使用。PWA可通过文件上传实现。');}
+
+// ============ INIT ============
+loadState();initSync();checkDay();render();
+</script>
+</body>
+</html>
