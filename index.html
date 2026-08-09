@@ -161,6 +161,12 @@ body{
 .link-result.show{display:block}
 .link-result .course-name{font-weight:700;color:#2E7D32}
 .link-result .link-url{font-size:11px;color:#888;word-break:break-all;margin-top:4px}
+.ep-item{display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:13px;transition:background .15s}
+.ep-item:hover{background:#f8f8f8}
+.ep-item input[type=checkbox]{margin:0;accent-color:#4CAF50}
+.ep-num{color:#00A1D6;font-weight:700;min-width:28px;font-size:12px}
+.ep-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ep-dur{color:#999;font-size:11px;min-width:40px;text-align:right}
 .nd-tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}
 .nd-tag-baidu{background:#FFF3E0;color:#E65100}.nd-tag-ali{background:#E3F2FD;color:#1565C0}
 .nd-tag-quark{background:#F3E5F5;color:#7B1FA2}.nd-tag-115{background:#FFF8E1;color:#F57F17}
@@ -591,6 +597,7 @@ function renderLearn(){
     html+='<input type="text" id="linkInput" placeholder="粘贴B站视频链接或网盘链接">';
     html+='<button class="btn-sm primary w-full" onclick="parseLink()">🔗解析链接</button>';
     html+='<div class="link-result" id="linkResult"><div><span class="course-name" id="parsedCourseName"></span><span id="ndTag"></span><button class="link-edit-btn" id="linkEditBtn" style="display:none" onclick="editParsedName()">✏️ 修改</button></div><div class="link-url" id="parsedLinkUrl"></div></div>';
+    html+='<div class="episode-panel" id="episodePanel" style="display:none;margin-top:8px;border:1px solid #e8e8e8;border-radius:8px;padding:8px;max-height:240px;overflow-y:auto"><div class="fs-12 fw-700 mb-4" style="color:#666">📺 分集列表</div><div id="episodeList"></div><div class="flex gap-8 mt-8"><button class="btn-sm primary flex-1" id="btnImportAll" onclick="importAllEpisodes()">📥 全部录入</button><button class="btn-sm outline flex-1" id="btnImportSel" onclick="importSelectedEpisodes()">📥 录入所选</button></div></div>';
     html+='</div>';
     html+='<button class="btn-sm primary w-full mb-8" onclick="addLmForm()">+ 手动添加章节</button>';
     html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
@@ -997,7 +1004,26 @@ function parseLink(){
       .then(function(r){ return r.json(); })
       .then(function(data){
         if(data.code === 0 && data.data && data.data.title){
+          window._bilibiliData = data.data;
           showResult(data.data.title, null, 'B站', url);
+          // 显示分集列表
+          var panel = document.getElementById('episodePanel');
+          var list = document.getElementById('episodeList');
+          if(data.data.pages && data.data.pages.length > 0){
+            var html = '';
+            data.data.pages.forEach(function(p){
+              var part = p.part || p.page;
+              html += '<label class="ep-item"><input type="checkbox" class="ep-cb" checked value="' + part + '">'
+                + '<span class="ep-num">P' + p.page + '</span>'
+                + '<span class="ep-title">' + part + '</span>'
+                + '<span class="ep-dur">' + formatDuration(p.duration) + '</span></label>';
+            });
+            list.innerHTML = html;
+            panel.style.display = 'block';
+            document.getElementById('btnImportSel').style.display = 'inline-block';
+          } else {
+            panel.style.display = 'none';
+          }
         } else {
           var fallback = prompt('B站API异常: ' + (data.message||''), 'B站视频_'+bv);
           if(fallback) showResult(fallback, null, 'B站', url);
@@ -1065,6 +1091,39 @@ function editParsedName(){
     window._parsedCourseName = n.trim();
     document.getElementById('parsedCourseName').textContent = '课程名称：'+n.trim();
   }
+}
+
+function formatDuration(sec){
+  if(!sec || sec<=0) return '';
+  var m = Math.floor(sec/60);
+  var s = sec%60;
+  return m+':'+(s<10?'0':'')+s;
+}
+
+function importAllEpisodes(){
+  var data = window._bilibiliData;
+  if(!data || !data.pages) return;
+  data.pages.forEach(function(p){
+    S.lmList.push({id:'lm'+(S.tidCtr++), s:data.title, ch:p.part||('第'+p.page+'集'), h:Math.ceil((p.duration||600)/3600*10)/10||0.5});
+  });
+  var cnt = data.pages.length;
+  showToast('已录入 '+cnt+' 个章节');
+  saveState(); render();
+}
+
+function importSelectedEpisodes(){
+  var data = window._bilibiliData;
+  if(!data || !data.pages) return;
+  var cbs = document.querySelectorAll('.ep-cb:checked');
+  var cnt = 0;
+  cbs.forEach(function(cb){
+    var title = cb.value;
+    S.lmList.push({id:'lm'+(S.tidCtr++), s:data.title, ch:title, h:0.5});
+    cnt++;
+  });
+  if(cnt===0){ showToast('请至少选择一个分集'); return; }
+  showToast('已录入 '+cnt+' 个章节');
+  saveState(); render();
 }
 
 // ============ INIT ============
