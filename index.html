@@ -991,29 +991,37 @@ function parseLink(){
     var bv = bvMatch ? bvMatch[0] : '';
     if(!bv){ showToast('未找到BV号，请手动输入课程名称'); return; }
 
-    function tryDirectFetch(){
-      return fetch('https://api.bilibili.com/x/web-interface/view?bvid='+bv, {mode:'cors'})
-        .then(function(r){return r.json();});
-    }
-    function tryProxyFetch(){
-      return fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.bilibili.com/x/web-interface/view?bvid='+bv))
-        .then(function(r){return r.json();});
+    var cbName = '_biliCb_' + Date.now();
+    var script = document.createElement('script');
+    var timeout = setTimeout(function(){
+      cleanup();
+      var fallback = prompt('B站JSONP请求超时，请输入课程名称', 'B站视频_'+bv);
+      if(fallback) showResult(fallback, null, 'B站', url);
+    }, 8000);
+
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
     }
 
-    tryDirectFetch().then(function(data){
+    window[cbName] = function(data){
+      cleanup();
       var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : null;
-      if(title){ showResult(title, null, 'B站', url); return; }
-      throw new Error('no title');
-    }).catch(function(){
-      tryProxyFetch().then(function(data){
-        var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : null;
-        if(title){ showResult(title, null, 'B站', url); return; }
-        throw new Error('no title');
-      }).catch(function(){
-        var fallback = prompt('无法获取B站视频标题，请输入课程名称', 'B站视频_'+bv);
+      if(title){ showResult(title, null, 'B站', url); }
+      else {
+        var fallback = prompt('B站API返回异常，请输入课程名称', 'B站视频_'+bv);
         if(fallback) showResult(fallback, null, 'B站', url);
-      });
-    });
+      }
+    };
+
+    script.src = 'https://api.bilibili.com/x/web-interface/view?bvid=' + bv + '&callback=' + cbName;
+    script.onerror = function(){
+      cleanup();
+      var fallback = prompt('B站API请求失败，请输入课程名称', 'B站视频_'+bv);
+      if(fallback) showResult(fallback, null, 'B站', url);
+    };
+    document.head.appendChild(script);
     return;
   }
 
