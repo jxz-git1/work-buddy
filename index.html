@@ -161,6 +161,11 @@ body{
 .link-result.show{display:block}
 .link-result .course-name{font-weight:700;color:#2E7D32}
 .link-result .link-url{font-size:11px;color:#888;word-break:break-all;margin-top:4px}
+.nd-tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}
+.nd-tag-baidu{background:#FFF3E0;color:#E65100}.nd-tag-ali{background:#E3F2FD;color:#1565C0}
+.nd-tag-quark{background:#F3E5F5;color:#7B1FA2}.nd-tag-115{background:#FFF8E1;color:#F57F17}
+.nd-tag-lanzou{background:#E8F5E9;color:#2E7D32}.nd-tag-123{background:#FCE4EC;color:#C62828}
+.link-edit-btn{font-size:12px;padding:4px 12px;border-radius:10px;border:1px solid #FFB380;background:#fff;color:#FFB380;cursor:pointer;margin-left:10px;font-weight:600}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -585,7 +590,7 @@ function renderLearn(){
     html+='<div class="link-parse-area"><div class="fw-700 mb-8" style="font-size:14px">🔗 链接解析录入</div>';
     html+='<input type="text" id="linkInput" placeholder="粘贴B站视频链接或网盘链接">';
     html+='<button class="btn-sm primary w-full" onclick="parseLink()">🔗解析链接</button>';
-    html+='<div class="link-result" id="linkResult"><div class="course-name" id="parsedCourseName"></div><div class="link-url" id="parsedLinkUrl"></div></div>';
+    html+='<div class="link-result" id="linkResult"><div><span class="course-name" id="parsedCourseName"></span><span id="ndTag"></span><button class="link-edit-btn" id="linkEditBtn" style="display:none" onclick="editParsedName()">✏️ 修改</button></div><div class="link-url" id="parsedLinkUrl"></div></div>';
     html+='</div>';
     html+='<button class="btn-sm primary w-full mb-8" onclick="addLmForm()">+ 手动添加章节</button>';
     html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
@@ -966,50 +971,106 @@ function parseLink(){
   var resultDiv = document.getElementById('linkResult');
   var nameEl = document.getElementById('parsedCourseName');
   var urlEl = document.getElementById('parsedLinkUrl');
+  var tagEl = document.getElementById('ndTag');
+  var editBtn = document.getElementById('linkEditBtn');
 
-  function showResult(title, source){
+  function showResult(title, tagClass, tagText, source){
     window._parsedCourseName = title;
     nameEl.textContent = '课程名称：'+title;
+    tagEl.className = 'nd-tag'+(tagClass?' '+tagClass:'');
+    tagEl.textContent = tagText||'';
+    tagEl.style.display = tagText ? 'inline-block' : 'none';
     urlEl.textContent = '来源：'+source;
+    editBtn.style.display = 'inline-block';
     resultDiv.classList.add('show');
   }
 
+  // ===== B站链接 =====
   if(url.indexOf('bilibili.com/video/')!==-1){
     var bvMatch = url.match(/BV[a-zA-Z0-9]+/);
     var bv = bvMatch ? bvMatch[0] : '';
-    if(bv){
-      fetch('https://api.bilibili.com/x/web-interface/view?bvid='+bv)
-        .then(function(r){return r.json();})
-        .then(function(data){
-          var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : 'B站视频_'+bv;
-          showResult(title, url);
-        })
-        .catch(function(){
-          showResult('B站视频_'+bv, url);
-          showToast('无法获取视频标题，已用BV号代替');
-        });
-    } else {
-      showResult('B站视频链接', url);
-      showToast('未找到BV号，请手动输入课程名称');
+    if(!bv){ showToast('未找到BV号，请手动输入课程名称'); return; }
+
+    function tryDirectFetch(){
+      return fetch('https://api.bilibili.com/x/web-interface/view?bvid='+bv, {mode:'cors'})
+        .then(function(r){return r.json();});
     }
-  } else if(url.indexOf('pan.baidu.com')!==-1 || url.indexOf('115.com')!==-1 || url.indexOf('aliyundrive.com')!==-1){
-    var fileName = '';
-    var m = url.match(/[?&]filename=([^&]+)/i) || url.match(/[?&]title=([^&]+)/i) || url.match(/[?&]share_name=([^&]+)/i);
-    if(m){
-      try{fileName = decodeURIComponent(m[1]);}catch(e){fileName = m[1];}
+    function tryProxyFetch(){
+      return fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.bilibili.com/x/web-interface/view?bvid='+bv))
+        .then(function(r){return r.json();});
     }
-    if(!fileName){
-      var parts = url.replace(/[?#].*$/,'').split('/');
-      var last = parts[parts.length-1];
-      if(last && last.indexOf('.')!==-1) fileName = last;
-    }
-    if(!fileName){
-      fileName = '网盘课程';
-      showToast('无法提取文件名，请手动修改');
-    }
-    showResult(fileName, url);
+
+    tryDirectFetch().then(function(data){
+      var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : null;
+      if(title){ showResult(title, null, 'B站', url); return; }
+      throw new Error('no title');
+    }).catch(function(){
+      tryProxyFetch().then(function(data){
+        var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : null;
+        if(title){ showResult(title, null, 'B站', url); return; }
+        throw new Error('no title');
+      }).catch(function(){
+        var fallback = prompt('无法获取B站视频标题，请输入课程名称', 'B站视频_'+bv);
+        if(fallback) showResult(fallback, null, 'B站', url);
+      });
+    });
+    return;
+  }
+
+  // ===== 网盘链接 =====
+  var netdisks = [
+    {host:'pan.baidu.com', tag:'nd-tag-baidu', label:'百度网盘'},
+    {host:'aliyundrive.com', tag:'nd-tag-ali', label:'阿里云盘'},
+    {host:'pan.quark.cn', tag:'nd-tag-quark', label:'夸克网盘'},
+    {host:'115.com', tag:'nd-tag-115', label:'115网盘'},
+    {host:'123pan.com', tag:'nd-tag-123', label:'123云盘'}
+  ];
+
+  // lanzou has subdomains like lanzoux.com, lanzoui.com etc.
+  var isLanzou = url.indexOf('lanzou')!==-1;
+
+  var matched = null;
+  for(var i=0;i<netdisks.length;i++){
+    if(url.indexOf(netdisks[i].host)!==-1){ matched = netdisks[i]; break; }
+  }
+  if(!matched && isLanzou){ matched = {host:'lanzou', tag:'nd-tag-lanzou', label:'蓝奏云'}; }
+  if(!matched){ showToast('未能识别的链接类型，支持B站/百度网盘/阿里云盘/夸克网盘/115网盘/蓝奏云/123云盘'); return; }
+
+  // Try to extract filename
+  var fileName = '';
+  var m = url.match(/[?&]filename=([^&]+)/i) ||
+          url.match(/[?&]title=([^&]+)/i) ||
+          url.match(/[?&]share_name=([^&]+)/i) ||
+          url.match(/[?&]name=([^&]+)/i) ||
+          url.match(/[?&]file_name=([^&]+)/i);
+  if(m){
+    try{fileName = decodeURIComponent(m[1]);}catch(e){fileName = m[1];}
+  }
+  if(!fileName){
+    var parts = url.replace(/[?#].*$/,'').split('/');
+    var last = parts[parts.length-1];
+    if(last && last.indexOf('.')!==-1) fileName = last;
+  }
+  if(!fileName){
+    // Extract pwd/surl-like path segments as fallback name hint
+    var surlMatch = url.match(/\/s\/([^\/?#]+)/);
+    if(surlMatch) fileName = '分享_'+surlMatch[1].substring(0,8);
+  }
+
+  if(fileName){
+    showResult(fileName, matched.tag, matched.label, url);
   } else {
-    showToast('未能识别的链接类型，支持B站/百度网盘/115/阿里云盘');
+    var manual = prompt('未能提取文件名，请输入课程名称', '');
+    if(manual) showResult(manual, matched.tag, matched.label, url);
+  }
+}
+
+function editParsedName(){
+  var cur = window._parsedCourseName || '';
+  var n = prompt('修改课程名称', cur);
+  if(n && n.trim()){
+    window._parsedCourseName = n.trim();
+    document.getElementById('parsedCourseName').textContent = '课程名称：'+n.trim();
   }
 }
 
