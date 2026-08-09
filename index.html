@@ -991,37 +991,22 @@ function parseLink(){
     var bv = bvMatch ? bvMatch[0] : '';
     if(!bv){ showToast('未找到BV号，请手动输入课程名称'); return; }
 
-    var cbName = '_biliCb_' + Date.now();
-    var script = document.createElement('script');
-    var timeout = setTimeout(function(){
-      cleanup();
-      var fallback = prompt('B站JSONP请求超时，请输入课程名称', 'B站视频_'+bv);
-      if(fallback) showResult(fallback, null, 'B站', url);
-    }, 8000);
+    showToast('正在获取标题...');
 
-    function cleanup(){
-      clearTimeout(timeout);
-      delete window[cbName];
-      if(script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = function(data){
-      cleanup();
-      var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : null;
-      if(title){ showResult(title, null, 'B站', url); }
-      else {
-        var fallback = prompt('B站API返回异常，请输入课程名称', 'B站视频_'+bv);
+    fetch('http://localhost:8765/bilibili?bvid=' + encodeURIComponent(bv))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.code === 0 && data.data && data.data.title){
+          showResult(data.data.title, null, 'B站', url);
+        } else {
+          var fallback = prompt('B站API异常: ' + (data.message||''), 'B站视频_'+bv);
+          if(fallback) showResult(fallback, null, 'B站', url);
+        }
+      })
+      .catch(function(){
+        var fallback = prompt('代理未启动或网络异常，请输入课程名称\n（运行 proxy.py 即可启动本地代理）', 'B站视频_'+bv);
         if(fallback) showResult(fallback, null, 'B站', url);
-      }
-    };
-
-    script.src = 'https://api.bilibili.com/x/web-interface/view?bvid=' + bv + '&callback=' + cbName;
-    script.onerror = function(){
-      cleanup();
-      var fallback = prompt('B站API请求失败，请输入课程名称', 'B站视频_'+bv);
-      if(fallback) showResult(fallback, null, 'B站', url);
-    };
-    document.head.appendChild(script);
+      });
     return;
   }
 
