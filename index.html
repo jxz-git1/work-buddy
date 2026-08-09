@@ -154,6 +154,13 @@ body{
 .ocr-row input[type=checkbox]{width:18px;height:18px;accent-color:#FF9800}
 .ocr-status{font-size:12px;color:#888;text-align:center;padding:8px}
 #ocrModal{display:none}
+.link-parse-area{background:#FFFAF5;border:2px solid #E8DDD0;border-radius:16px;padding:14px;margin-bottom:12px}
+.link-parse-area input[type=text]{width:100%;padding:10px 14px;border-radius:12px;border:2px solid #E8DDD0;font-size:14px;background:#fff;outline:none;margin-bottom:10px}
+.link-parse-area input[type=text]:focus{border-color:#FFB380}
+.link-result{display:none;background:#E8F5E9;border-radius:12px;padding:10px 14px;font-size:13px;margin-top:8px}
+.link-result.show{display:block}
+.link-result .course-name{font-weight:700;color:#2E7D32}
+.link-result .link-url{font-size:11px;color:#888;word-break:break-all;margin-top:4px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -575,6 +582,11 @@ function renderLearn(){
   html+='<div class="collapse-h" onclick="_collapses.lm=!_collapses.lm;render()"><span>📋 总课表管理</span><span class="collapse-arrow'+(S.collapses&&S.collapses.lm?' open':'')+'">▶</span></div>';
   if(_collapses.lm){
     html+='<div class="collapse-body">';
+    html+='<div class="link-parse-area"><div class="fw-700 mb-8" style="font-size:14px">🔗 链接解析录入</div>';
+    html+='<input type="text" id="linkInput" placeholder="粘贴B站视频链接或网盘链接">';
+    html+='<button class="btn-sm primary w-full" onclick="parseLink()">🔗解析链接</button>';
+    html+='<div class="link-result" id="linkResult"><div class="course-name" id="parsedCourseName"></div><div class="link-url" id="parsedLinkUrl"></div></div>';
+    html+='</div>';
     html+='<button class="btn-sm primary w-full mb-8" onclick="addLmForm()">+ 手动添加章节</button>';
     html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
     html+='<div id="photos" class="photo-strip"></div>';
@@ -740,10 +752,13 @@ function renderHistory(){
 
 // ============ ACTIONS ============
 function addLmForm(){
-  var s=prompt('科目名称', ''); if(!s)return;
+  var defaultSubject = window._parsedCourseName || '';
+  var s=prompt('科目名称', defaultSubject); if(!s)return;
   var ch=prompt('章节名称', ''); if(!ch)return;
   var h=parseFloat(prompt('预计时长(h)', '')); if(isNaN(h))return;
-  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h});saveState();render();
+  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h});
+  window._parsedCourseName = '';
+  saveState();render();
 }
 function editLm(id){
   var item=S.lmList.find(function(x){return x.id===id;});if(!item)return;
@@ -941,6 +956,61 @@ function cancelOCR(e){
   if(e&&e.target!==document.getElementById('ocrModal'))return;
   S._ocrLines=[];
   document.getElementById('ocrModal').style.display='none';
+}
+
+// ============ LINK PARSING ============
+function parseLink(){
+  var url = document.getElementById('linkInput').value.trim();
+  if(!url){showToast('请粘贴链接');return;}
+
+  var resultDiv = document.getElementById('linkResult');
+  var nameEl = document.getElementById('parsedCourseName');
+  var urlEl = document.getElementById('parsedLinkUrl');
+
+  function showResult(title, source){
+    window._parsedCourseName = title;
+    nameEl.textContent = '课程名称：'+title;
+    urlEl.textContent = '来源：'+source;
+    resultDiv.classList.add('show');
+  }
+
+  if(url.indexOf('bilibili.com/video/')!==-1){
+    var bvMatch = url.match(/BV[a-zA-Z0-9]+/);
+    var bv = bvMatch ? bvMatch[0] : '';
+    if(bv){
+      fetch('https://api.bilibili.com/x/web-interface/view?bvid='+bv)
+        .then(function(r){return r.json();})
+        .then(function(data){
+          var title = (data&&data.code===0&&data.data&&data.data.title) ? data.data.title : 'B站视频_'+bv;
+          showResult(title, url);
+        })
+        .catch(function(){
+          showResult('B站视频_'+bv, url);
+          showToast('无法获取视频标题，已用BV号代替');
+        });
+    } else {
+      showResult('B站视频链接', url);
+      showToast('未找到BV号，请手动输入课程名称');
+    }
+  } else if(url.indexOf('pan.baidu.com')!==-1 || url.indexOf('115.com')!==-1 || url.indexOf('aliyundrive.com')!==-1){
+    var fileName = '';
+    var m = url.match(/[?&]filename=([^&]+)/i) || url.match(/[?&]title=([^&]+)/i) || url.match(/[?&]share_name=([^&]+)/i);
+    if(m){
+      try{fileName = decodeURIComponent(m[1]);}catch(e){fileName = m[1];}
+    }
+    if(!fileName){
+      var parts = url.replace(/[?#].*$/,'').split('/');
+      var last = parts[parts.length-1];
+      if(last && last.indexOf('.')!==-1) fileName = last;
+    }
+    if(!fileName){
+      fileName = '网盘课程';
+      showToast('无法提取文件名，请手动修改');
+    }
+    showResult(fileName, url);
+  } else {
+    showToast('未能识别的链接类型，支持B站/百度网盘/115/阿里云盘');
+  }
 }
 
 // ============ INIT ============
