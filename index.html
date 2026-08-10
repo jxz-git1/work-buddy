@@ -172,10 +172,44 @@ body{
 .nd-tag-quark{background:#F3E5F5;color:#7B1FA2}.nd-tag-115{background:#FFF8E1;color:#F57F17}
 .nd-tag-lanzou{background:#E8F5E9;color:#2E7D32}.nd-tag-123{background:#FCE4EC;color:#C62828}
 .link-edit-btn{font-size:12px;padding:4px 12px;border-radius:10px;border:1px solid #FFB380;background:#fff;color:#FFB380;cursor:pointer;margin-left:10px;font-weight:600}
+/* category modal */
+.cat-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:flex-end}
+.cat-modal-overlay.show{display:flex}
+.cat-modal{background:#fff;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:20px 16px 28px;animation:slideUp .25s}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cat-modal .cm-title{font-size:16px;font-weight:700;margin-bottom:16px;text-align:center}
+.cat-modal .cm-field{margin-bottom:14px}
+.cat-modal .cm-label{font-size:13px;color:#666;margin-bottom:6px;font-weight:600}
+.cat-modal .cm-input{width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:14px;box-sizing:border-box}
+.cat-modal .cm-input:focus{border-color:#4CAF50;outline:none}
+.cat-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.cat-tab{padding:8px 16px;border-radius:20px;border:2px solid #e0e0e0;background:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.cat-tab.active{background:#4CAF50;color:#fff;border-color:#4CAF50}
+.cat-tab-course.active{background:#4CAF50;border-color:#4CAF50}
+.cat-tab-exercise.active{background:#FF9800;border-color:#FF9800}
+.cat-tab-exam.active{background:#E91E63;border-color:#E91E63}
+.cat-tab-recite.active{background:#9C27B0;border-color:#9C27B0}
+.cat-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.cat-badge-course{background:#E8F5E9;color:#2E7D32}
+.cat-badge-exercise{background:#FFF3E0;color:#E65100}
+.cat-badge-exam{background:#FCE4EC;color:#C62828}
+.cat-badge-recite{background:#F3E5F5;color:#7B1FA2}
+/* schedule panel */
+.schedule-result{background:#F0F7FF;border:2px solid #BBDEFB;border-radius:16px;padding:14px;margin-top:12px;display:none}
+.schedule-result.show{display:block}
+.sched-day{margin-bottom:10px}
+.sched-day-title{font-weight:700;font-size:14px;color:#1565C0;margin-bottom:6px}
+.sched-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px dashed #E3F2FD}
+.sched-item:last-child{border-bottom:none}
+.sched-cat{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.sched-name{flex:1}
+.sched-h{font-size:11px;color:#999;flex-shrink:0}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
+
+<div class="cat-modal-overlay" id="catModalOverlay"></div>
 
 <div class="sync-bar" id="syncBar">
   <span id="syncIcon" style="font-size:16px">☁️</span>
@@ -302,6 +336,7 @@ var S = {
   xp:0,level:1,streak:0,lifetimeDone:0,lifetimeXP:0,gems:0,
   lxp:0,lastDay:'',mDone:{l:false,w:false,h:false,f:false},
   earned:{},
+  examDate:'',schedule:'',
   habits:{poop:0,water:0},
   qProg:{},qDoneD:{},qDoneW:{}
 };
@@ -323,7 +358,7 @@ function initDefaults(){
     {id:'h2',title:'扫地拖地',meta:'每日',tag:'tag-life',done:false,at:''}
   ];
   S.lmList = [
-    {s:'民法',ch:'合同编总论',h:10},{s:'英语',ch:'词汇核心2000词',h:40},{s:'政治',ch:'马原第1-4章',h:12}
+    {s:'民法',ch:'合同编总论',h:10,cat:'课程',dl:'',round:1},{s:'英语',ch:'词汇核心2000词',h:40,cat:'课程',dl:'',round:1},{s:'政治',ch:'马原第1-4章',h:12,cat:'课程',dl:'',round:1}
   ];
   S.wmList = [
     {name:'请拨单：志愿服务经费',dl:'8/6',p:'urgent'},
@@ -454,7 +489,9 @@ function toggleLearn(idx){
   t.done=!t.done;
   if(t.done){t.at=fmtTime();S.lifetimeDone++;S.streak++;S.mDone.l=true;S.history.unshift({title:t.title,cat:'l',time:t.at});addXP(10);}
   else{t.at='';S.lifetimeDone=Math.max(0,S.lifetimeDone-1);S.streak=Math.max(0,S.streak-1);}
-  saveState();render();
+  saveState();
+  if(S.learn.length>0&&S.learn.every(function(lt){return lt.done;})){ doSchedule(); saveState(); }
+  render();
 }
 function toggleWork(idx){
   var t=S.work[idx];
@@ -590,7 +627,7 @@ function renderLearn(){
   var done2=all2.filter(function(t){return t.done;}).length;
   var total2=all2.length;
   var treePct=total2>0?Math.round(done2/total2*100):0;
-  html+='<div class="collapse-h" onclick="_collapses.lm=!_collapses.lm;render()"><span>📋 总课表管理</span><span class="collapse-arrow'+(S.collapses&&S.collapses.lm?' open':'')+'">▶</span></div>';
+  html+='<div class="collapse-h" onclick="_collapses.lm=!_collapses.lm;render()"><span>📋 总课表管理</span><span class="collapse-arrow'+(_collapses.lm?' open':'')+'">▶</span></div>';
   if(_collapses.lm){
     html+='<div class="collapse-body">';
     html+='<div class="link-parse-area"><div class="fw-700 mb-8" style="font-size:14px">🔗 链接解析录入</div>';
@@ -599,12 +636,48 @@ function renderLearn(){
     html+='<div class="link-result" id="linkResult"><div><span class="course-name" id="parsedCourseName"></span><span id="ndTag"></span><button class="link-edit-btn" id="linkEditBtn" style="display:none" onclick="editParsedName()">✏️ 修改</button></div><div class="link-url" id="parsedLinkUrl"></div></div>';
     html+='<div class="episode-panel" id="episodePanel" style="display:none;margin-top:8px;border:1px solid #e8e8e8;border-radius:8px;padding:8px;max-height:240px;overflow-y:auto"><div class="fs-12 fw-700 mb-4" style="color:#666">📺 分集列表</div><div id="episodeList"></div><div class="flex gap-8 mt-8"><button class="btn-sm primary flex-1" id="btnImportAll" onclick="importAllEpisodes()">📥 全部录入</button><button class="btn-sm outline flex-1" id="btnImportSel" onclick="importSelectedEpisodes()">📥 录入所选</button></div></div>';
     html+='</div>';
-    html+='<button class="btn-sm primary w-full mb-8" onclick="addLmForm()">+ 手动添加章节</button>';
+    html+='<button class="btn-sm primary w-full mb-8" onclick="openCatModal(\'manual\')">+ 手动添加章节</button>';
     html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
     html+='<div id="photos" class="photo-strip"></div>';
-    html+='<div class="fs-12 text-sub">已录入 '+S.lmList.length+' 章</div>';
+    html+='<div class="flex gap-8 mt-12 mb-8" style="align-items:center;flex-wrap:wrap"><div class="cm-label" style="margin-bottom:0;white-space:nowrap">考试截止：</div><input type="date" id="examDateInput" value="'+S.examDate+'" style="flex:1;min-width:120px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:10px;font-size:13px" onchange="S.examDate=this.value;saveState()"><button class="btn-sm primary" onclick="autoSchedule()" style="white-space:nowrap">📅 自动排课</button></div>';
+    html+='<div class="schedule-result" id="scheduleResult"></div>';
+    html+='<div class="flex" style="justify-content:space-between;align-items:center"><span class="fs-12 text-sub">已录入 '+S.lmList.length+' 章</span><div style="display:flex;gap:4px"><button class="btn-sm" id="filterDelBtn" style="background:#fff;color:#1565C0;border:1px solid #1565C0;border-radius:12px;font-size:12px;padding:2px 12px" onclick="toggleFilterDel()">🔍 筛选</button><button class="btn-sm" id="batchDelBtn" style="background:#fee;color:#c33;border:1px solid #c33;border-radius:12px;font-size:12px;opacity:0.4" onclick="batchDelLm()">🗑 批量删除</button></div></div>';
+    // filter delete panel
+    html+='<div id="filterDelPanel" style="display:none;margin-top:8px;padding:10px;background:#F8F8FF;border-radius:10px;border:1px solid #E3E3F0">';
+    html+='<div class="fs-12 fw-700 mb-6" style="color:#555">按科目 / 类别筛选（可多选）</div>';
+    var subjects = []; var categories = ['课程','习题','真题','背诵'];
+    S.lmList.forEach(function(item){ if((item.round||0)>0 && subjects.indexOf(item.s)===-1) subjects.push(item.s); });
+    html+='<div class="flex gap-6 mb-6" style="flex-wrap:wrap">';
+    subjects.forEach(function(s){
+      html+='<label class="filter-chip" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fff;border:1px solid #ccc;border-radius:14px;font-size:12px;cursor:pointer"><input type="checkbox" class="filt-sub" value="'+s+'" onchange="applyFilterDel()" style="margin:0">'+s+'</label>';
+    });
+    html+='</div><div class="flex gap-6" style="flex-wrap:wrap">';
+    categories.forEach(function(c){
+      html+='<label class="filter-chip" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fff;border:1px solid #ccc;border-radius:14px;font-size:12px;cursor:pointer"><input type="checkbox" class="filt-cat" value="'+c+'" onchange="applyFilterDel()" style="margin:0">'+c+'</label>';
+    });
+    html+='<button class="btn-sm" style="padding:2px 12px;background:transparent;color:#999;border:1px solid #ddd;border-radius:14px;font-size:12px" onclick="clearFilterDel()">清除</button>';
+    html+='</div></div>';
+
     S.lmList.forEach(function(item){
-      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><span class="tag tag-must">'+item.s+'</span><span class="flex-1" style="cursor:pointer" onclick="editLm(\''+item.id+'\')" title="点击编辑">'+item.ch+' ✎</span><span class="fs-12 text-sub">'+item.h+'h</span><button class="btn-sm" style="background:#fee;color:#c33;padding:2px 8px;border-radius:8px;border:none;font-size:12px" onclick="delLm(\''+item.id+'\')">✕</button></div>';
+      if((item.round||0)<=0) return;
+      var catBadge='';var catClass='';
+      if(item.cat==='课程'){catBadge='课程';catClass='cat-badge-course';}
+      else if(item.cat==='习题'){catBadge='习题';catClass='cat-badge-exercise';}
+      else if(item.cat==='真题'){catBadge='真题';catClass='cat-badge-exam';}
+      else if(item.cat==='背诵'){catBadge='背诵';catClass='cat-badge-recite';}
+      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><input type="checkbox" class="del-check" value="'+item.id+'" onchange="onDelCheck()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0">'
+        +'<span class="tag tag-must">'+item.s+'</span>'
+        +(catBadge?'<span class="cat-badge '+catClass+'">'+catBadge+'</span>':'')
+        +'<span class="flex-1" style="cursor:pointer" onclick="openCatModal(\'edit\',\''+item.id+'\')" title="点击编辑">'+item.ch+' ✎</span>'
+        +'<span class="round-ctl" style="display:inline-flex;align-items:center;gap:2px;font-size:12px;flex-shrink:0;margin-right:6px;background:#F5F5F5;border-radius:12px;padding:1px 6px">'
+        +'<button class="btn-sm" onclick="event.stopPropagation();adjRound(\''+item.id+'\',-1)" style="padding:0 5px;min-width:20px;background:transparent;color:#999;font-size:14px;border:none;cursor:pointer;line-height:1">−</button>'
+        +'<span class="round-num" style="font-weight:700;color:#1565C0;min-width:42px;text-align:center">第'+(item.round||1)+'轮</span>'
+        +'<button class="btn-sm" onclick="event.stopPropagation();adjRound(\''+item.id+'\',1)" style="padding:0 5px;min-width:20px;background:transparent;color:#1565C0;font-size:14px;border:none;cursor:pointer;line-height:1">+</button>'
+        +'</span>'
+        +(item.qtype?'<span class="fs-11" style="background:#E8F5E9;color:#2E7D32;padding:1px 6px;border-radius:8px;flex-shrink:0">'+item.qtype+'</span>':'')
+        +'<span class="fs-12 text-sub">'+item.h+'h</span>'
+        +(item.dl?'<span class="fs-11" style="color:#E91E63;white-space:nowrap">截止 '+item.dl+'</span>':'')
+        +'<button class="btn-sm" style="background:#fee;color:#c33;padding:2px 8px;border-radius:8px;border:none;font-size:12px" onclick="delLm(\''+item.id+'\')">✕</button></div>';
     });
     html+='</div>';
   }
@@ -619,6 +692,7 @@ function renderLearn(){
     '<div class="tree-bar"><div class="tree-fill" style="width:'+treePct+'%"></div></div>'+
     '<div class="tree-text">'+(treePct>=100?'全部完成！':treePct>=60?'做得不错':treePct>=30?'稳步前进中':'开始第一项吧')+'</div></div>';
   html+='</div>';
+  if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule();
   return html;
 }
 
@@ -763,25 +837,187 @@ function renderHistory(){
 }
 
 // ============ ACTIONS ============
-function addLmForm(){
-  var defaultSubject = window._parsedCourseName || '';
-  var s=prompt('科目名称', defaultSubject); if(!s)return;
-  var ch=prompt('章节名称', ''); if(!ch)return;
-  var h=parseFloat(prompt('预计时长(h)', '')); if(isNaN(h))return;
-  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h});
+// ============ CATEGORY MODAL ============
+var _catModal = {mode:'manual', editId:'', subject:'', chapter:'', hours:2, category:'课程', deadline:'', importItems:null};
+
+function openCatModal(mode, editId){
+  _catModal.mode = mode; _catModal.editId = editId||'';
+  if(mode !== 'import') _catModal.importItems = null;
+  if(mode==='edit' && editId){
+    var item = S.lmList.find(function(x){return x.id===editId;});
+    if(item){
+      _catModal.subject = item.s; _catModal.chapter = item.ch;
+      _catModal.hours = item.h; _catModal.category = item.cat||'课程'; _catModal.deadline = item.dl||'';
+    }
+  } else if(mode==='manual'){
+    _catModal.subject = window._parsedCourseName || ''; _catModal.chapter = '';
+    _catModal.hours = 2; _catModal.category = '课程'; _catModal.deadline = '';
+  } else if(mode==='import'){
+    _catModal.subject = window._parsedCourseName || ''; _catModal.chapter = '';
+    if(_catModal.importItems && _catModal.importItems.length>0){
+      _catModal.hours = Math.round(_catModal.importItems.reduce(function(s,i){return s+(i.h||0.5);},0)*10)/10;
+    } else {
+      _catModal.hours = 2;
+    }
+    _catModal.category = '课程'; _catModal.deadline = ''; _catModal.importRound = 1;
+  }
+  renderCatModal();
+  document.getElementById('catModalOverlay').classList.add('show');
+}
+
+function closeCatModal(){
+  document.getElementById('catModalOverlay').classList.remove('show');
   window._parsedCourseName = '';
-  saveState();render();
 }
-function editLm(id){
-  var item=S.lmList.find(function(x){return x.id===id;});if(!item)return;
-  var s=prompt('科目名称',item.s);if(s!==null)item.s=s;
-  var ch=prompt('章节名称',item.ch);if(ch!==null)item.ch=ch;
-  var h=prompt('预计时长(h)',item.h);if(h!==null&&!isNaN(parseFloat(h)))item.h=parseFloat(h);
-  saveState();render();
+
+function setCategory(cat){
+  _catModal.category = cat;
+  document.querySelectorAll('.cat-tab').forEach(function(el){el.classList.remove('active');});
+  var el = document.getElementById('catTab_'+cat);
+  if(el) el.classList.add('active');
 }
+
+function renderCatModal(){
+  var overlay = document.getElementById('catModalOverlay');
+  var isImport = _catModal.mode==='import';
+  var itemCnt = _catModal.importItems ? _catModal.importItems.length : 0;
+  var titleText = isImport ? ('📥 批量录入 '+itemCnt+' 个章节') : (_catModal.mode==='edit'?'✏️ 编辑章节':'➕ 添加章节');
+  overlay.innerHTML =
+    '<div class="cat-modal">'+
+    '<div class="cm-title">'+titleText+'</div>'+
+    '<div class="cm-field"><div class="cm-label">科目名称</div><input class="cm-input" id="cmSubject" value="'+_catModal.subject+'" placeholder="如：民法"></div>'+
+    (isImport?'':
+    '<div class="cm-field"><div class="cm-label">章节名称</div><input class="cm-input" id="cmChapter" value="'+_catModal.chapter+'" placeholder="如：合同编总论"></div>')+
+    '<div class="cm-field"><div class="cm-label">预计时长（小时）</div><input class="cm-input" id="cmHours" type="number" value="'+_catModal.hours+'" step="0.5" min="0.5"></div>'+
+    (isImport?'<div class="cm-field"><div class="cm-label">每章轮数</div><input class="cm-input" id="cmRound" type="number" value="'+(_catModal.importRound||1)+'" step="1" min="1" max="10"></div>':'')+
+    '<div class="cm-field"><div class="cm-label">类别</div>'+
+    '<div class="cat-tabs">'+
+    '<div class="cat-tab cat-tab-course' + (_catModal.category==='课程'?' active':'') + '" id="catTab_课程" onclick="setCategory(\'课程\')">📖 课程</div>'+
+    '<div class="cat-tab cat-tab-exercise' + (_catModal.category==='习题'?' active':'') + '" id="catTab_习题" onclick="setCategory(\'习题\')">📝 习题</div>'+
+    '<div class="cat-tab cat-tab-exam' + (_catModal.category==='真题'?' active':'') + '" id="catTab_真题" onclick="setCategory(\'真题\')">📋 真题</div>'+
+    '<div class="cat-tab cat-tab-recite' + (_catModal.category==='背诵'?' active':'') + '" id="catTab_背诵" onclick="setCategory(\'背诵\')">📖 背诵</div>'+
+    '</div></div>'+
+    '<div class="cm-field"><div class="cm-label">题型（英语科目可选）</div><select class="cm-input" id="cmQtype" style="height:36px"><option value=""'+
+    (_catModal.qtype?'':' selected')+'>不设</option><option value="完形填空"'+(_catModal.qtype==='完形填空'?' selected':'')+'>完形填空</option><option value="阅读理解"'+(_catModal.qtype==='阅读理解'?' selected':'')+'>阅读理解</option><option value="翻译"'+(_catModal.qtype==='翻译'?' selected':'')+'>翻译</option><option value="写作"'+(_catModal.qtype==='写作'?' selected':'')+'>写作</option><option value="新题型"'+(_catModal.qtype==='新题型'?' selected':'')+'>新题型</option></select></div>'+
+    '<div class="cm-field"><div class="cm-label">章节截止日期（可选）</div><input class="cm-input" id="cmDeadline" type="date" value="'+_catModal.deadline+'"></div>'+
+    '<div class="flex gap-8 mt-16">'+
+    '<button class="btn-sm outline flex-1" onclick="closeCatModal()">取消</button>'+
+    '<button class="btn-sm primary flex-1" onclick="confirmCatModal()">'+(isImport?'📥 确认录入':'💾 保存')+'</button>'+
+    '</div></div>';
+}
+
+function confirmCatModal(){
+  _catModal.subject = document.getElementById('cmSubject').value.trim();
+  _catModal.hours = parseFloat(document.getElementById('cmHours').value) || 2;
+  _catModal.deadline = document.getElementById('cmDeadline').value;
+  if(!_catModal.subject){ showToast('请填写科目名称'); return; }
+  if(_catModal.mode==='manual'){
+    _catModal.chapter = document.getElementById('cmChapter').value.trim();
+    if(!_catModal.chapter){ showToast('请填写章节名称'); return; }
+    var qEl = document.getElementById('cmQtype');
+    var qtype = qEl ? qEl.value : '';
+    S.lmList.push({id:'lm'+(S.tidCtr++), s:_catModal.subject, ch:_catModal.chapter, h:_catModal.hours, cat:_catModal.category, dl:_catModal.deadline, round:1, qtype:qtype});
+    showToast('已添加');
+  } else if(_catModal.mode==='edit'){
+    var item = S.lmList.find(function(x){return x.id===_catModal.editId;});
+    if(item){
+      _catModal.chapter = document.getElementById('cmChapter').value.trim();
+      if(!_catModal.chapter){ showToast('请填写章节名称'); return; }
+      item.s = _catModal.subject; item.ch = _catModal.chapter;
+      item.h = _catModal.hours; item.cat = _catModal.category; item.dl = _catModal.deadline;
+      var qEl = document.getElementById('cmQtype');
+      if(qEl) item.qtype = qEl.value;
+      showToast('已更新');
+    }
+  } else if(_catModal.mode==='import'){
+    var items = _catModal.importItems;
+    if(!items || items.length===0){ showToast('无章节可导入'); return; }
+    var roundEl = document.getElementById('cmRound');
+    var round = roundEl ? parseInt(roundEl.value)||1 : 1;
+    var qEl = document.getElementById('cmQtype');
+    var qtype = qEl ? qEl.value : '';
+    items.forEach(function(ep){
+      S.lmList.push({id:'lm'+(S.tidCtr++), s:_catModal.subject, ch:ep.title||ep.part||'章节', h:ep.h||_catModal.hours, cat:_catModal.category, dl:_catModal.deadline, round:round, qtype:qtype});
+    });
+    showToast('已录入 '+items.length+' 个章节（每章'+round+'轮）');
+    // clear episode panel
+    var epPanel = document.getElementById('episodePanel');
+    if(epPanel) epPanel.style.display = 'none';
+  }
+  window._parsedCourseName = '';
+  closeCatModal();
+  saveState(); render();
+}
+
+// modal click outside to close
+document.addEventListener('click', function(e){
+  if(e.target.id==='catModalOverlay') closeCatModal();
+});
+
 function delLm(id){
   if(!confirm('确定删除此章节？'))return;
   S.lmList=S.lmList.filter(function(x){return x.id!==id;});
+  saveState();render();
+}
+
+function adjRound(id, delta){
+  var item = S.lmList.find(function(x){return x.id===id;});
+  if(!item) return;
+  if(!item.round) item.round=1;
+  item.round = Math.max(1, item.round+delta);
+  saveState();render();
+}
+
+function onDelCheck(){
+  var checked = document.querySelectorAll('.del-check:checked');
+  var btn = document.getElementById('batchDelBtn');
+  if(btn) btn.style.opacity = checked.length > 0 ? '1' : '0.4';
+}
+
+function toggleFilterDel(){
+  var panel = document.getElementById('filterDelPanel');
+  if(panel) panel.style.display = panel.style.display==='none'?'block':'none';
+}
+
+function applyFilterDel(){
+  var selSubs = []; var selCats = [];
+  document.querySelectorAll('.filt-sub:checked').forEach(function(c){ selSubs.push(c.value); });
+  document.querySelectorAll('.filt-cat:checked').forEach(function(c){ selCats.push(c.value); });
+  var anyFilter = selSubs.length>0 || selCats.length>0;
+  document.querySelectorAll('.del-check').forEach(function(cb){
+    var row = cb.closest('.flex');
+    var sEl = row ? row.querySelector('.tag-must') : null;
+    var catEl = row ? row.querySelector('.cat-badge') : null;
+    var s = sEl ? sEl.textContent.trim() : '';
+    var cat = catEl ? catEl.textContent.trim() : '';
+    var matchSub = selSubs.length===0 || selSubs.indexOf(s)!==-1;
+    var matchCat = selCats.length===0 || selCats.indexOf(cat)!==-1;
+    cb.checked = anyFilter && matchSub && matchCat;
+  });
+  if(!anyFilter){
+    document.querySelectorAll('.del-check').forEach(function(cb){ cb.checked = false; });
+  }
+  onDelCheck();
+}
+
+function clearFilterDel(){
+  document.querySelectorAll('.filt-sub:checked,.filt-cat:checked').forEach(function(c){ c.checked = false; });
+  document.querySelectorAll('.del-check').forEach(function(cb){ cb.checked = false; });
+  onDelCheck();
+}
+
+function batchDelLm(){
+  var checked = document.querySelectorAll('.del-check:checked');
+  if(checked.length===0) return;
+  var names = [];
+  checked.forEach(function(cb){
+    var item = S.lmList.find(function(x){return x.id===cb.value;});
+    if(item) names.push(item.ch);
+  });
+  if(!confirm('确定删除以下 '+names.length+' 个章节吗？\n\n- '+names.join('\n- '))) return;
+  var ids = [];
+  checked.forEach(function(cb){ ids.push(cb.value); });
+  S.lmList = S.lmList.filter(function(x){ return ids.indexOf(x.id)===-1; });
   saveState();render();
 }
 function addWmForm(){
@@ -1019,6 +1255,8 @@ function parseLink(){
                 + '<span class="ep-dur">' + formatDuration(p.duration) + '</span></label>';
             });
             list.innerHTML = html;
+            panel.querySelector('.fs-12').textContent = '📺 分集列表';
+            document.getElementById('btnImportAll').textContent = '📥 全部录入';
             panel.style.display = 'block';
             document.getElementById('btnImportSel').style.display = 'inline-block';
           } else {
@@ -1038,16 +1276,14 @@ function parseLink(){
 
   // ===== 网盘链接 =====
   var netdisks = [
-    {host:'pan.baidu.com', tag:'nd-tag-baidu', label:'百度网盘'},
+    {host:'pan.baidu.com', tag:'nd-tag-baidu', label:'百度网盘', proxy:'baidu'},
     {host:'aliyundrive.com', tag:'nd-tag-ali', label:'阿里云盘'},
-    {host:'pan.quark.cn', tag:'nd-tag-quark', label:'夸克网盘'},
+    {host:'pan.quark.cn', tag:'nd-tag-quark', label:'夸克网盘', proxy:'quark'},
     {host:'115.com', tag:'nd-tag-115', label:'115网盘'},
     {host:'123pan.com', tag:'nd-tag-123', label:'123云盘'}
   ];
 
-  // lanzou has subdomains like lanzoux.com, lanzoui.com etc.
   var isLanzou = url.indexOf('lanzou')!==-1;
-
   var matched = null;
   for(var i=0;i<netdisks.length;i++){
     if(url.indexOf(netdisks[i].host)!==-1){ matched = netdisks[i]; break; }
@@ -1055,7 +1291,63 @@ function parseLink(){
   if(!matched && isLanzou){ matched = {host:'lanzou', tag:'nd-tag-lanzou', label:'蓝奏云'}; }
   if(!matched){ showToast('未能识别的链接类型，支持B站/百度网盘/阿里云盘/夸克网盘/115网盘/蓝奏云/123云盘'); return; }
 
-  // Try to extract filename
+  // ===== 百度/夸克：走代理解析文件列表 =====
+  if(matched.proxy){
+    showToast('正在解析网盘文件列表...');
+    var pwd = '';
+    var pm = url.match(/[?&]pwd=([^&]+)/i) || url.match(/[?&]code=([^&]+)/i) || url.match(/[?&]passcode=([^&]+)/i);
+    if(pm) pwd = pm[1];
+    var proxyUrl = 'http://localhost:8765/' + matched.proxy + '?url=' + encodeURIComponent(url);
+    if(pwd) proxyUrl += '&pwd=' + encodeURIComponent(pwd);
+
+    fetch(proxyUrl)
+      .then(function(r){ return r.json(); })
+      .then(function(resp){
+        if(resp.code === 0 && resp.data){
+          window._cloudData = resp.data;
+          showResult(resp.data.title, matched.tag, matched.label, url);
+          // 显示文件列表面板
+          var panel = document.getElementById('episodePanel');
+          var list = document.getElementById('episodeList');
+          var files = resp.data.files;
+          if(files && files.length > 0){
+            var html = '';
+            files.forEach(function(f, idx){
+              html += '<label class="ep-item"><input type="checkbox" class="ep-cb" checked value="' + idx + '">'
+                + '<span class="ep-num">' + (f.isdir ? '📁' : '📄') + '</span>'
+                + '<span class="ep-title">' + f.name + '</span>'
+                + '<span class="ep-dur">' + formatFileSize(f.size) + '</span></label>';
+            });
+            list.innerHTML = html;
+            // 更新面板标题
+            panel.querySelector('.fs-12').textContent = '📁 文件列表 ('+files.length+'项)';
+            document.getElementById('btnImportAll').textContent = '📥 全部录入';
+            panel.style.display = 'block';
+            document.getElementById('btnImportSel').style.display = 'inline-block';
+          } else {
+            panel.style.display = 'none';
+            showToast('未找到文件。请确认链接正确且已包含提取码');
+          }
+        } else if(resp.code === 1){
+          // 需要提取码
+          var inputPwd = prompt('此分享需要提取码，请输入', '');
+          if(inputPwd){
+            document.getElementById('linkInput').value = url + (url.indexOf('?')===-1?'?':'&') + 'pwd=' + inputPwd;
+            parseLink();
+          }
+        } else {
+          var fallback = prompt('解析失败: ' + (resp.message||''), '');
+          if(fallback) showResult(fallback, matched.tag, matched.label, url);
+        }
+      })
+      .catch(function(){
+        var fallback = prompt('代理未启动，请输入课程名称\n（运行 proxy.py 启动本地代理后可使用文件列表解析）', '');
+        if(fallback) showResult(fallback, matched.tag, matched.label, url);
+      });
+    return;
+  }
+
+  // ===== 其他网盘：从URL提取文件名 =====
   var fileName = '';
   var m = url.match(/[?&]filename=([^&]+)/i) ||
           url.match(/[?&]title=([^&]+)/i) ||
@@ -1071,7 +1363,6 @@ function parseLink(){
     if(last && last.indexOf('.')!==-1) fileName = last;
   }
   if(!fileName){
-    // Extract pwd/surl-like path segments as fallback name hint
     var surlMatch = url.match(/\/s\/([^\/?#]+)/);
     if(surlMatch) fileName = '分享_'+surlMatch[1].substring(0,8);
   }
@@ -1100,31 +1391,150 @@ function formatDuration(sec){
   return m+':'+(s<10?'0':'')+s;
 }
 
+function formatFileSize(bytes){
+  if(!bytes || bytes<=0) return '';
+  if(bytes<1024) return bytes+'B';
+  if(bytes<1048576) return (bytes/1024).toFixed(1)+'KB';
+  if(bytes<1073741824) return (bytes/1048576).toFixed(1)+'MB';
+  return (bytes/1073741824).toFixed(2)+'GB';
+}
+
 function importAllEpisodes(){
-  var data = window._bilibiliData;
-  if(!data || !data.pages) return;
-  data.pages.forEach(function(p){
-    S.lmList.push({id:'lm'+(S.tidCtr++), s:data.title, ch:p.part||('第'+p.page+'集'), h:Math.ceil((p.duration||600)/3600*10)/10||0.5});
-  });
-  var cnt = data.pages.length;
-  showToast('已录入 '+cnt+' 个章节');
-  saveState(); render();
+  var bData = window._bilibiliData;
+  var cData = window._cloudData;
+  if(bData && bData.pages){
+    window._parsedCourseName = bData.title;
+    _catModal.importItems = bData.pages.map(function(p){
+      return {title: p.part||('第'+p.page+'集'), h: Math.ceil((p.duration||600)/3600*10)/10||0.5};
+    });
+  } else if(cData && cData.files){
+    window._parsedCourseName = cData.title;
+    _catModal.importItems = cData.files.map(function(f){
+      return {title: f.name, h: Math.max(0.5, Math.ceil(f.size/1024/1024/100*10)/10)};
+    });
+  } else return;
+  openCatModal('import');
 }
 
 function importSelectedEpisodes(){
-  var data = window._bilibiliData;
-  if(!data || !data.pages) return;
+  var bData = window._bilibiliData;
+  var cData = window._cloudData;
   var cbs = document.querySelectorAll('.ep-cb:checked');
-  var cnt = 0;
-  cbs.forEach(function(cb){
-    var title = cb.value;
-    S.lmList.push({id:'lm'+(S.tidCtr++), s:data.title, ch:title, h:0.5});
-    cnt++;
-  });
-  if(cnt===0){ showToast('请至少选择一个分集'); return; }
-  showToast('已录入 '+cnt+' 个章节');
-  saveState(); render();
+  if(cbs.length===0){ showToast('请至少选择一项'); return; }
+
+  if(bData && bData.pages){
+    window._parsedCourseName = bData.title;
+    _catModal.importItems = [];
+    cbs.forEach(function(cb){
+      _catModal.importItems.push({title: cb.value, h: 0.5});
+    });
+  } else if(cData && cData.files){
+    window._parsedCourseName = cData.title;
+    _catModal.importItems = [];
+    cbs.forEach(function(cb){
+      var idx = parseInt(cb.value);
+      var f = cData.files[idx];
+      if(f) _catModal.importItems.push({title: f.name, h: Math.max(0.5, Math.ceil(f.size/1024/1024/100*10)/10)});
+    });
+  } else return;
+  openCatModal('import');
 }
+
+// ============ AUTO SCHEDULER ============
+var SUBJ_ORDER = ['刑法','英语','民法','行政法','法制史','宪法','政治'];
+var CAT_ORDER = ['课程','习题','背诵','真题'];
+
+function extractChapNum(ch){
+  var m = ch.match(/第\s*(\d+)\s*章/);
+  if(m) return parseInt(m[1]);
+  m = ch.match(/[0-9]+/);
+  if(m) return parseInt(m[0]);
+  return 9999;
+}
+
+// interleave: category batches, within each category round-robin by subject
+function interleaveItems(items){
+  var byCat = {};
+  CAT_ORDER.forEach(function(c){byCat[c]={};});
+  items.forEach(function(it){
+    var cat = it.cat||'课程';
+    if(!byCat[cat]) byCat[cat] = {};
+    if(!byCat[cat][it.s]) byCat[cat][it.s] = [];
+    byCat[cat][it.s].push(it);
+  });
+  for(var c in byCat){
+    for(var s in byCat[c]){
+      byCat[c][s].sort(function(a,b){return extractChapNum(a.ch)-extractChapNum(b.ch);});
+    }
+  }
+  var result = [];
+  CAT_ORDER.forEach(function(cat){
+    var groups = byCat[cat];
+    var subjList = SUBJ_ORDER.filter(function(s){return groups[s]&&groups[s].length>0;});
+    if(subjList.length===0) return;
+    var maxCh = 0;
+    subjList.forEach(function(s){maxCh=Math.max(maxCh,groups[s].length);});
+    for(var i=0;i<maxCh;i++){
+      subjList.forEach(function(s){
+        if(i<groups[s].length) result.push(groups[s][i]);
+      });
+    }
+  });
+  return result;
+}
+
+function doSchedule(){
+  if(!S.examDate) return false;
+  var doneIds = {};
+  S.learn.forEach(function(t){ if(t.done && t.lmId) doneIds[t.lmId]=true; });
+  var items = [];
+  S.lmList.forEach(function(it){
+    if((it.round||0)<=0) return;
+    if(doneIds[it.id]) return;
+    items.push(it);
+  });
+  if(items.length===0){
+    var hadItems = false;
+    S.lmList.forEach(function(it){ if(it.round&&it.round>0){ it.round--; hadItems=true; } });
+    S.lmList = S.lmList.filter(function(x){return (x.round||0)>0;});
+    if(hadItems) showToast('本轮全部完成，已自动进入下一轮');
+    S.learn = [];
+    return doSchedule();
+  }
+  items = interleaveItems(items);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var deadline = new Date(S.examDate+'T00:00:00');
+  var daysLeft = Math.max(1, Math.ceil((deadline - today) / 86400000));
+  var perDay = Math.ceil(items.length / daysLeft);
+  var batch = items.slice(0, perDay);
+  S.learn = [];
+  batch.forEach(function(it){
+    var catTag = 'tag-must';
+    if(it.cat==='习题') catTag = 'tag-opt';
+    else if(it.cat==='真题') catTag = 'tag-urgent';
+    else if(it.cat==='背诵') catTag = 'tag-opt';
+    var typeStr = it.qtype ? ' · '+it.qtype : '';
+    S.learn.push({id:'sched'+(S.tidCtr++), title:it.s+'·'+it.ch+typeStr, meta:it.cat+'|预计'+it.h+'h', tag:catTag, done:false, at:'', lmId:it.id});
+  });
+  return true;
+}
+
+function autoSchedule(){
+  if(S.lmList.length===0){ showToast('请先添加课程'); return; }
+  if(!S.examDate){ showToast('请先设置考试截止日期'); return; }
+  if(S.learn.length>0 && S.learn.some(function(t){return !t.done && t.lmId;})){ showToast('请先完成今日学习再排新课'); return; }
+  doSchedule();
+  var resultEl = document.getElementById('scheduleResult');
+  if(resultEl){
+    resultEl.innerHTML = '<div class="fs-13" style="color:#1565C0">✅ 已排 '+S.learn.length+' 项到今日学习</div><button class="btn-sm outline w-full mt-8" onclick="document.getElementById(\'scheduleResult\').classList.remove(\'show\')">✕ 关闭</button>';
+    resultEl.classList.add('show');
+  }
+  _currentSchedule = null;
+  saveState();render();
+}
+
+var _currentSchedule = null;
+function applySchedule(){ /* kept for backward compat */ }
 
 // ============ INIT ============
 loadState();initSync();checkDay();render();
