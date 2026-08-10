@@ -1505,7 +1505,14 @@ function doSchedule(){
   var today = new Date(); today.setHours(0,0,0,0);
   var deadline = new Date(S.examDate+'T00:00:00');
   var daysLeft = Math.max(1, Math.ceil((deadline - today) / 86400000));
-  var perDay = Math.ceil(items.length / daysLeft);
+  // count total items across ALL remaining rounds (not just current round)
+  var totalRemaining = 0;
+  S.lmList.forEach(function(it){
+    if((it.round||0)<=0) return;
+    totalRemaining += it.round;
+    if(doneIds[it.id]) totalRemaining--; // already consumed one slot this round
+  });
+  var perDay = Math.ceil(totalRemaining / daysLeft);
   var batch = items.slice(0, perDay);
   S.learn = [];
   batch.forEach(function(it){
