@@ -622,6 +622,7 @@ function renderContent(){
 }
 
 function renderLearn(){
+  if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule();
   var html='<div class="sec">';
   var all2=S.learn.concat(S.work).concat(S.life);
   var done2=all2.filter(function(t){return t.done;}).length;
@@ -692,7 +693,6 @@ function renderLearn(){
     '<div class="tree-bar"><div class="tree-fill" style="width:'+treePct+'%"></div></div>'+
     '<div class="tree-text">'+(treePct>=100?'全部完成！':treePct>=60?'做得不错':treePct>=30?'稳步前进中':'开始第一项吧')+'</div></div>';
   html+='</div>';
-  if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule();
   return html;
 }
 
