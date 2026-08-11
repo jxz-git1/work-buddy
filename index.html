@@ -1497,9 +1497,12 @@ function doSchedule(){
     var hadItems = false;
     S.lmList.forEach(function(it){ if(it.round&&it.round>0){ it.round--; hadItems=true; } });
     S.lmList = S.lmList.filter(function(x){return (x.round||0)>0;});
-    if(hadItems) showToast('本轮全部完成，已自动进入下一轮');
-    S.learn = [];
-    return doSchedule();
+    if(hadItems){
+      showToast('本轮全部完成，已自动进入下一轮');
+      S.learn = [];
+      return doSchedule();
+    }
+    return false;
   }
   items = interleaveItems(items);
   var today = new Date(); today.setHours(0,0,0,0);
