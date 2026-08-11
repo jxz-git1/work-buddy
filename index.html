@@ -639,7 +639,7 @@ function renderLearn(){
     html+='<button class="btn-sm primary w-full mb-8" onclick="openCatModal(\'manual\')">+ 手动添加章节</button>';
     html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
     html+='<div id="photos" class="photo-strip"></div>';
-    html+='<div class="flex gap-8 mt-12 mb-8" style="align-items:center;flex-wrap:wrap"><div class="cm-label" style="margin-bottom:0;white-space:nowrap">考试截止：</div><input type="date" id="examDateInput" value="'+S.examDate+'" style="flex:1;min-width:120px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:10px;font-size:13px" onchange="S.examDate=this.value;saveState()"><button class="btn-sm primary" onclick="autoSchedule()" style="white-space:nowrap">📅 自动排课</button></div>';
+    html+='<div class="flex gap-8 mt-12 mb-8" style="align-items:center;flex-wrap:wrap"><div class="cm-label" style="margin-bottom:0;white-space:nowrap">考试截止：</div><input type="date" id="examDateInput" value="'+S.examDate+'" style="flex:1;min-width:120px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:10px;font-size:13px" onchange="S.examDate=this.value;saveState()"><button class="btn-sm primary" onclick="autoSchedule()" style="white-space:nowrap">📅 自动排课</button><button class="btn-sm" onclick="resetAllRounds()" style="white-space:nowrap;background:#fff;color:#1565C0;border:1px solid #1565C0">🔄 重置轮数</button></div>';
     html+='<div class="schedule-result" id="scheduleResult"></div>';
     html+='<div class="flex" style="justify-content:space-between;align-items:center"><span class="fs-12 text-sub">已录入 '+S.lmList.filter(function(x){return (x.round||0)>0;}).length+' 章</span><div style="display:flex;gap:4px"><button class="btn-sm" id="filterDelBtn" style="background:#fff;color:#1565C0;border:1px solid #1565C0;border-radius:12px;font-size:12px;padding:2px 12px" onclick="toggleFilterDel()">🔍 筛选</button><button class="btn-sm" id="batchDelBtn" style="background:#fee;color:#c33;border:1px solid #c33;border-radius:12px;font-size:12px;opacity:0.4" onclick="batchDelLm()">🗑 批量删除</button></div></div>';
     // filter delete panel
@@ -1529,6 +1529,16 @@ function doSchedule(){
   return true;
 }
 
+function resetAllRounds(){
+  if(!confirm('将所有课程的轮数重置为第1轮？')) return;
+  S.lmList.forEach(function(it){ it.round = 1; });
+  S.learn = [];
+  saveState();
+  showToast('已重置全部 '+S.lmList.length+' 门课程轮数为第1轮');
+  doSchedule();
+  saveState();render();
+}
+
 function autoSchedule(){
   if(S.lmList.length===0){ showToast('请先添加课程'); return; }
   if(!S.examDate){ showToast('请先设置考试截止日期'); return; }
@@ -1549,7 +1559,13 @@ var _currentSchedule = null;
 function applySchedule(){ /* kept for backward compat */ }
 
 // ============ INIT ============
-loadState();initSync();checkDay();render();
+loadState();initSync();checkDay();
+// auto-recover: if courses exist but all rounds are 0, reset to 1
+if(S.lmList.length>0 && !S.lmList.some(function(it){return (it.round||0)>0;})) {
+  S.lmList.forEach(function(it){ it.round = 1; });
+  saveState();
+}
+render();
 </script>
 </body>
 </html>
