@@ -1533,7 +1533,9 @@ function autoSchedule(){
   if(S.lmList.length===0){ showToast('请先添加课程'); return; }
   if(!S.examDate){ showToast('请先设置考试截止日期'); return; }
   if(S.learn.length>0 && S.learn.some(function(t){return !t.done && t.lmId;})){ showToast('请先完成今日学习再排新课'); return; }
-  doSchedule();
+  var ok = doSchedule();
+  if(!ok){ showToast('无法排课：课程均已学完或截止日期已过'); return; }
+  showToast('已排 '+S.learn.length+' 项到今日学习');
   var resultEl = document.getElementById('scheduleResult');
   if(resultEl){
     resultEl.innerHTML = '<div class="fs-13" style="color:#1565C0">✅ 已排 '+S.learn.length+' 项到今日学习</div><button class="btn-sm outline w-full mt-8" onclick="document.getElementById(\'scheduleResult\').classList.remove(\'show\')">✕ 关闭</button>';
