@@ -390,7 +390,15 @@ function checkDay(){
     S.scheduledToday = '';
     S.qProg = {}; S.qDoneD = {};
     S.habits = {poop:0,water:0}; S.exer = [];
-    S.learn.forEach(function(t){t.done=false;t.at='';});
+    // Consume rounds for completed items before clearing
+    S.learn.forEach(function(t){
+      if(t.done && t.lmId){
+        var lm = S.lmList.find(function(it){return it.id===t.lmId;});
+        if(lm && (lm.round||0)>0) lm.round--;
+      }
+    });
+    S.lmList = S.lmList.filter(function(x){return (x.round||0)>0;});
+    S.learn = [];
     S.work.forEach(function(t){t.done=false;t.at='';});
     S.life.forEach(function(t){t.done=false;t.at='';});
     saveState();
@@ -1487,7 +1495,6 @@ function interleaveItems(items){
 function doSchedule(force){
   if(!S.examDate) return false;
   var todayStr = new Date().toDateString();
-  if(!force && S.scheduledToday === todayStr) return false;
   var doneIds = {};
   S.learn.forEach(function(t){ if(t.done && t.lmId) doneIds[t.lmId]=true; });
   var items = [];
@@ -1507,6 +1514,8 @@ function doSchedule(force){
     }
     return false;
   }
+  // Only schedule one batch per day (manual override via force=true)
+  if(!force && S.scheduledToday === todayStr) return false;
   items = interleaveItems(items);
   var today = new Date(); today.setHours(0,0,0,0);
   var deadline = new Date(S.examDate+'T00:00:00');
