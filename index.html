@@ -1467,9 +1467,10 @@ function interleaveItems(items){
   CAT_ORDER.forEach(function(c){byCat[c]={};});
   items.forEach(function(it){
     var cat = it.cat||'课程';
+    var subj = it.s||'';
     if(!byCat[cat]) byCat[cat] = {};
-    if(!byCat[cat][it.s]) byCat[cat][it.s] = [];
-    byCat[cat][it.s].push(it);
+    if(!byCat[cat][subj]) byCat[cat][subj] = [];
+    byCat[cat][subj].push(it);
   });
   for(var c in byCat){
     for(var s in byCat[c]){
@@ -1477,19 +1478,30 @@ function interleaveItems(items){
     }
   }
   var result = [];
-  CAT_ORDER.forEach(function(cat){
-    var groups = byCat[cat];
-    var subjList = SUBJ_ORDER.filter(function(s){return groups[s]&&groups[s].length>0;});
-    if(subjList.length===0) return;
-    var maxCh = 0;
-    subjList.forEach(function(s){maxCh=Math.max(maxCh,groups[s].length);});
-    for(var i=0;i<maxCh;i++){
-      subjList.forEach(function(s){
-        if(i<groups[s].length) result.push(groups[s][i]);
-      });
-    }
-  });
+  // Process CAT_ORDER first, then remaining categories
+  CAT_ORDER.forEach(function(cat){ interleaveCat(cat, byCat, result); });
+  for(var cat in byCat){
+    if(CAT_ORDER.indexOf(cat)===-1) interleaveCat(cat, byCat, result);
+  }
   return result;
+}
+
+function interleaveCat(cat, byCat, result){
+  var groups = byCat[cat];
+  if(!groups) return;
+  // Ordered subjects first, then remaining
+  var subjList = SUBJ_ORDER.filter(function(s){return groups[s]&&groups[s].length>0;});
+  for(var s in groups){
+    if(SUBJ_ORDER.indexOf(s)===-1 && groups[s].length>0) subjList.push(s);
+  }
+  if(subjList.length===0) return;
+  var maxCh = 0;
+  subjList.forEach(function(s){maxCh=Math.max(maxCh,groups[s].length);});
+  for(var i=0;i<maxCh;i++){
+    subjList.forEach(function(s){
+      if(i<groups[s].length) result.push(groups[s][i]);
+    });
+  }
 }
 
 function doSchedule(force){
