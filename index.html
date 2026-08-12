@@ -1495,6 +1495,10 @@ function interleaveItems(items){
 function doSchedule(force){
   if(!S.examDate) return false;
   var todayStr = new Date().toDateString();
+  // Auto-fix any courses missing or with invalid round
+  var needSave = false;
+  S.lmList.forEach(function(it){ if(!it.round||it.round<=0){ it.round=1; needSave=true; } });
+  if(needSave) saveState();
   var doneIds = {};
   S.learn.forEach(function(t){ if(t.done && t.lmId) doneIds[t.lmId]=true; });
   var items = [];
