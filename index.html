@@ -1156,7 +1156,7 @@ function photoToCourse(i){
   var s=prompt('科目名称','');if(!s)return;
   var ch=prompt('章节名称','');if(!ch)return;
   var h=parseFloat(prompt('预计时长(h)',''));if(isNaN(h))return;
-  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h});
+  S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h,round:1,cat:'课程',dl:S.examDate||''});
   saveState();render();
 }
 function delPhoto(i){
@@ -1201,7 +1201,7 @@ function confirmOCR(){
   S._ocrLines.forEach(function(item,i){
     if(!item.checked||!item.subject||!item.chapter)return;
     var h=item.hours||1;
-    S.lmList.push({id:'lm'+(S.tidCtr++),s:item.subject,ch:item.chapter,h:h});
+    S.lmList.push({id:'lm'+(S.tidCtr++),s:item.subject,ch:item.chapter,h:h,round:1,cat:'课程',dl:S.examDate||''});
     added++;
   });
   S._ocrLines=[];
@@ -1573,11 +1573,10 @@ function applySchedule(){ /* kept for backward compat */ }
 
 // ============ INIT ============
 loadState();initSync();checkDay();
-// auto-recover: if courses exist but all rounds are 0, reset to 1
-if(S.lmList.length>0 && !S.lmList.some(function(it){return (it.round||0)>0;})) {
-  S.lmList.forEach(function(it){ it.round = 1; });
-  saveState();
-}
+// auto-recover: fix courses missing round or with round<=0
+var fixedRounds = false;
+S.lmList.forEach(function(it){ if(!it.round||it.round<=0){ it.round=1; fixedRounds=true; } });
+if(fixedRounds) saveState();
 render();
 </script>
 </body>
