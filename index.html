@@ -358,7 +358,9 @@ function initDefaults(){
     {id:'h2',title:'扫地拖地',meta:'每日',tag:'tag-life',done:false,at:''}
   ];
   S.lmList = [
-    {s:'民法',ch:'合同编总论',h:10,cat:'课程',dl:'',round:1},{s:'英语',ch:'词汇核心2000词',h:40,cat:'课程',dl:'',round:1},{s:'政治',ch:'马原第1-4章',h:12,cat:'课程',dl:'',round:1}
+    {id:'lm'+(S.tidCtr++),s:'民法',ch:'合同编总论',h:10,cat:'课程',dl:'',round:1},
+    {id:'lm'+(S.tidCtr++),s:'英语',ch:'词汇核心2000词',h:40,cat:'课程',dl:'',round:1},
+    {id:'lm'+(S.tidCtr++),s:'政治',ch:'马原第1-4章',h:12,cat:'课程',dl:'',round:1}
   ];
   S.wmList = [
     {name:'请拨单：志愿服务经费',dl:'8/6',p:'urgent'},
@@ -369,6 +371,11 @@ function initDefaults(){
   ];
 }
 
+function fixLmIds(){
+  var fixed=false;
+  S.lmList.forEach(function(it){ if(!it.id){ it.id='lm'+(S.tidCtr++); fixed=true; } });
+  return fixed;
+}
 function loadState(){
   try{
     var raw = localStorage.getItem('wb_state_v4');
@@ -378,6 +385,7 @@ function loadState(){
       Object.keys(s).forEach(function(k){S[k]=s[k];});
     }else{initDefaults();}
   }catch(e){initDefaults();}
+  if(fixLmIds()) saveState();
 }
 function saveState(){
   localStorage.setItem('wb_state_v4',JSON.stringify(S));
@@ -444,6 +452,7 @@ function loadFromCloud(){
         var remoteTs = new Date(rows[0].updated_at).getTime();
         if(remoteTs > localTs){
           Object.keys(remote).forEach(function(k){S[k]=remote[k];});
+          fixLmIds();
           saveState();
           document.getElementById('syncText').textContent='已从云端同步最新数据';
           setTimeout(function(){updateSyncUI();},2000);
@@ -966,6 +975,7 @@ document.addEventListener('click', function(e){
 function delLm(id){
   if(!confirm('确定删除此章节？'))return;
   S.lmList=S.lmList.filter(function(x){return x.id!==id;});
+  S.learn=S.learn.filter(function(t){return t.lmId!==id;});
   saveState();render();
 }
 
@@ -1027,6 +1037,7 @@ function batchDelLm(){
   var ids = [];
   checked.forEach(function(cb){ ids.push(cb.value); });
   S.lmList = S.lmList.filter(function(x){ return ids.indexOf(x.id)===-1; });
+  S.learn = S.learn.filter(function(t){ return ids.indexOf(t.lmId)===-1; });
   saveState();render();
 }
 function addWmForm(){
