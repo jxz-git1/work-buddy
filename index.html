@@ -10,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
-  background:#FFF8E7;color:#4A3728;min-height:100vh;padding-bottom:160px;
+  background:#FFF8E7;color:#4A3728;min-height:100vh;padding-bottom:180px;
   -webkit-tap-highlight-color:transparent;
   user-select:none;-webkit-user-select:none;
 }
@@ -119,6 +119,10 @@ body{
   box-shadow:0 6px 24px rgba(255,138,101,0.5);display:flex;
   align-items:center;justify-content:center;color:#fff;
   font-size:36px;font-weight:700;z-index:999;cursor:pointer;border:none}
+.bottom-bar{position:fixed;left:0;right:0;bottom:0;height:48px;background:#fff;border-top:1px solid #F5EDE0;
+  display:flex;align-items:center;justify-content:center;gap:12px;z-index:998;padding:0 18px}
+.bottom-bar button{background:#FF5252;color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:13px;
+  font-weight:600;cursor:pointer}
 .modal-mask{position:fixed;top:0;left:0;right:0;bottom:0;
   background:rgba(0,0,0,0.45);z-index:9999;display:none;align-items:flex-end}
 .modal-mask.show{display:flex}
@@ -204,12 +208,61 @@ body{
 .sched-cat{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0}
 .sched-name{flex:1}
 .sched-h{font-size:11px;color:#999;flex-shrink:0}
+/* fitness character */
+.fit-hero{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 0;position:relative}
+.fit-char-wrap{position:relative;width:80px;height:120px;flex-shrink:0;perspective:400px}
+.fit-char-wrap .char-3d{width:100%;height:100%;transform-style:preserve-3d;animation:charIdle 3s ease-in-out infinite}
+@keyframes charIdle{0%,100%{transform:rotateY(-5deg) rotateX(3deg) translateY(0)}50%{transform:rotateY(5deg) rotateX(-2deg) translateY(-4px)}}
+.fit-char-wrap.bounce .char-3d{animation:charBounce3d 0.5s ease}
+@keyframes charBounce3d{0%{transform:rotateY(0) translateY(0)}30%{transform:rotateY(-10deg) translateY(-14px)}60%{transform:rotateY(8deg) translateY(-6px)}100%{transform:rotateY(0) translateY(0)}}
+/* coin jar */
+.coin-jar-wrap{position:relative;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.coin-jar-count{font-size:13px;font-weight:700;color:#F57C00;background:#FFF8E1;padding:2px 10px;border-radius:12px}
+.coin-jar-wrap.shake svg{animation:jarShake 0.4s ease}
+@keyframes jarShake{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+/* coin particle flying to jar */
+.coin-particle{position:absolute;font-size:20px;pointer-events:none;z-index:9999;animation:coinFly 0.7s cubic-bezier(.25,.8,.25,1.2) forwards}
+@keyframes coinFly{0%{transform:translate(0,0) scale(1);opacity:1}60%{transform:translate(var(--mx),calc(var(--my) - 20px)) scale(1.2);opacity:1}100%{transform:translate(var(--tx),var(--ty)) scale(0.4);opacity:0}}
+/* history date folder */
+.h-date-folder{margin-bottom:12px;border:1px solid #E8E0D5;border-radius:12px;overflow:hidden}
+.h-date-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FAF5EE;cursor:pointer;font-size:13px;font-weight:700;color:#8B7D72}
+.h-date-header:hover{background:#F5EDE0}
+.h-date-arrow{transition:transform 0.25s;font-size:11px}
+.h-date-folder.open .h-date-arrow{transform:rotate(90deg)}
+.h-date-body{display:none;padding:4px 0}
+.h-date-folder.open .h-date-body{display:block}
+/* exercise confirm dialog */
+.ex-confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;justify-content:center;align-items:center}
+.ex-confirm-overlay.show{display:flex}
+.ex-confirm-card{background:#fff;width:90%;max-width:340px;border-radius:20px;padding:24px 20px;text-align:center;animation:slideUp .25s}
+.ex-confirm-card .exc-title{font-size:16px;font-weight:700;margin-bottom:12px}
+.ex-confirm-card .exc-detail{font-size:13px;color:#666;margin-bottom:20px;line-height:1.8}
+.ex-confirm-card .exc-detail span{font-weight:700;color:#333}
+.ex-confirm-card .exc-btns{display:flex;gap:10px}
+.ex-confirm-card .exc-btns button{flex:1;padding:10px;border-radius:12px;font-size:14px;font-weight:600;border:none;cursor:pointer}
+.ex-confirm-card .exc-btns .exc-cancel{background:#f5f5f5;color:#666}
+.ex-confirm-card .exc-btns .exc-ok{background:#FFD1DC;color:#C0392B}
+/* exercise item delete */
+.ex-item .ex-del{visibility:hidden;font-size:16px;color:#ccc;cursor:pointer;margin-left:8px;line-height:1}
+.ex-item:hover .ex-del{visibility:visible}
+.ex-item:hover .ex-del:hover{color:#e74c3c}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
 <div class="cat-modal-overlay" id="catModalOverlay"></div>
+
+<div class="ex-confirm-overlay" id="exConfirmOverlay" onclick="if(event.target===this)cancelExer()">
+  <div class="ex-confirm-card">
+    <div class="exc-title">确认记录运动</div>
+    <div class="exc-detail" id="excDetail"></div>
+    <div class="exc-btns">
+      <button class="exc-cancel" onclick="cancelExer()">取消</button>
+      <button class="exc-ok" onclick="addExer()">确认记录</button>
+    </div>
+  </div>
+</div>
 
 <div class="sync-bar" id="syncBar">
   <span id="syncIcon" style="font-size:16px">☁️</span>
@@ -341,7 +394,7 @@ var S = {
   qProg:{},qDoneD:{},qDoneW:{}
 };
 var _tab = 'learn';
-var _collapses = {lm:false,wm:false,hm:false};
+var _collapses = {lm:true,wm:false,hm:false,lmFolders:{}};
 
 function initDefaults(){
   S.learn = [
@@ -500,6 +553,8 @@ function showToast(msg){
   document.body.appendChild(el);
   setTimeout(function(){el.remove();},2000);
 }
+
+function escHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
 // ============ TASK TOGGLE ============
 function toggleLearn(idx){
@@ -677,26 +732,50 @@ function renderLearn(){
     html+='<button class="btn-sm" style="padding:2px 12px;background:transparent;color:#999;border:1px solid #ddd;border-radius:14px;font-size:12px" onclick="clearFilterDel()">清除</button>';
     html+='</div></div>';
 
+    // Group items by subject into folders
+    var grouped = {};
     S.lmList.forEach(function(item){
       if((item.round||0)<=0) return;
-      var catBadge='';var catClass='';
-      if(item.cat==='课程'){catBadge='课程';catClass='cat-badge-course';}
-      else if(item.cat==='习题'){catBadge='习题';catClass='cat-badge-exercise';}
-      else if(item.cat==='真题'){catBadge='真题';catClass='cat-badge-exam';}
-      else if(item.cat==='背诵'){catBadge='背诵';catClass='cat-badge-recite';}
-      html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><input type="checkbox" class="del-check" value="'+item.id+'" onchange="onDelCheck()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0">'
-        +'<span class="tag tag-must">'+item.s+'</span>'
-        +(catBadge?'<span class="cat-badge '+catClass+'">'+catBadge+'</span>':'')
-        +'<span class="flex-1" style="cursor:pointer" onclick="openCatModal(\'edit\',\''+item.id+'\')" title="点击编辑">'+item.ch+' ✎</span>'
-        +'<span class="round-ctl" style="display:inline-flex;align-items:center;gap:2px;font-size:12px;flex-shrink:0;margin-right:6px;background:#F5F5F5;border-radius:12px;padding:1px 6px">'
-        +'<button class="btn-sm" onclick="event.stopPropagation();adjRound(\''+item.id+'\',-1)" style="padding:0 5px;min-width:20px;background:transparent;color:#999;font-size:14px;border:none;cursor:pointer;line-height:1">−</button>'
-        +'<span class="round-num" style="font-weight:700;color:#1565C0;min-width:42px;text-align:center">第'+(item.round||1)+'轮</span>'
-        +'<button class="btn-sm" onclick="event.stopPropagation();adjRound(\''+item.id+'\',1)" style="padding:0 5px;min-width:20px;background:transparent;color:#1565C0;font-size:14px;border:none;cursor:pointer;line-height:1">+</button>'
-        +'</span>'
-        +(item.qtype?'<span class="fs-11" style="background:#E8F5E9;color:#2E7D32;padding:1px 6px;border-radius:8px;flex-shrink:0">'+item.qtype+'</span>':'')
-        +'<span class="fs-12 text-sub">'+item.h+'h</span>'
-        +(item.dl?'<span class="fs-11" style="color:#E91E63;white-space:nowrap">截止 '+item.dl+'</span>':'')
-        +'<button class="btn-sm" style="background:#fee;color:#c33;padding:2px 8px;border-radius:8px;border:none;font-size:12px" onclick="delLm(\''+item.id+'\')">✕</button></div>';
+      if(!grouped[item.s]) grouped[item.s] = [];
+      grouped[item.s].push(item);
+    });
+    var subjectsSorted = Object.keys(grouped).sort();
+    // Subject folder rendering
+    _collapses.lmFolders = _collapses.lmFolders || {};
+    subjectsSorted.forEach(function(subject){
+      var items = grouped[subject];
+      var folderOpen = _collapses.lmFolders[subject] === true;
+      html+='<div class="lm-folder" style="margin-top:10px">';
+      html+='<div class="lm-folder-h" onclick="_collapses.lmFolders[\''+subject.replace(/'/g,"\\'")+'\']=!_collapses.lmFolders[\''+subject.replace(/'/g,"\\'")+'\'];render()" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:#F0F4FF;border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:#3F51B5">';
+      html+='<span class="folder-arrow" style="display:inline-block;transition:transform 0.2s;font-size:10px;'+(folderOpen?'transform:rotate(90deg)':'')+'">▶</span>';
+      html+='<span>📁 '+subject+'</span>';
+      html+='<span style="font-weight:400;color:#999;font-size:11px;margin-left:auto">'+items.length+'章</span>';
+      html+='</div>';
+      if(folderOpen){
+        html+='<div class="lm-folder-body" style="padding-left:4px">';
+        items.forEach(function(item){
+          var catBadge='';var catClass='';
+          if(item.cat==='课程'){catBadge='课程';catClass='cat-badge-course';}
+          else if(item.cat==='习题'){catBadge='习题';catClass='cat-badge-exercise';}
+          else if(item.cat==='真题'){catBadge='真题';catClass='cat-badge-exam';}
+          else if(item.cat==='背诵'){catBadge='背诵';catClass='cat-badge-recite';}
+          html+='<div class="flex mt-8 gap-8" style="align-items:center;font-size:14px"><input type="checkbox" class="del-check" value="'+item.id+'" onchange="onDelCheck()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0">'
+            +'<span class="tag tag-must">'+item.s+'</span>'
+            +(catBadge?'<span class="cat-badge '+catClass+'">'+catBadge+'</span>':'')
+            +'<span class="flex-1" style="cursor:pointer" onclick="openCatModal(\'edit\',\''+item.id+'\')" title="点击编辑">'+item.ch+' ✎</span>'
+            +'<span class="round-ctl" style="display:inline-flex;align-items:center;gap:2px;font-size:12px;flex-shrink:0;margin-right:6px;background:#F5F5F5;border-radius:12px;padding:1px 6px">'
+            +'<button class="btn-sm" onclick="event.stopPropagation();adjRound(\''+item.id+'\',-1)" style="padding:0 5px;min-width:20px;background:transparent;color:#999;font-size:14px;border:none;cursor:pointer;line-height:1">−</button>'
+            +'<span class="round-num" style="font-weight:700;color:#1565C0;min-width:42px;text-align:center">第'+(item.round||1)+'轮</span>'
+            +'<button class="btn-sm" onclick="event.stopPropagation();adjRound(\''+item.id+'\',1)" style="padding:0 5px;min-width:20px;background:transparent;color:#1565C0;font-size:14px;border:none;cursor:pointer;line-height:1">+</button>'
+            +'</span>'
+            +(item.qtype?'<span class="fs-11" style="background:#E8F5E9;color:#2E7D32;padding:1px 6px;border-radius:8px;flex-shrink:0">'+item.qtype+'</span>':'')
+            +'<span class="fs-12 text-sub">'+item.h+'h</span>'
+            +(item.dl?'<span class="fs-11" style="color:#E91E63;white-space:nowrap">截止 '+item.dl+'</span>':'')
+            +'<button class="btn-sm" style="background:#fee;color:#c33;padding:2px 8px;border-radius:8px;border:none;font-size:12px" onclick="delLm(\''+item.id+'\')">✕</button></div>';
+        });
+        html+='</div>';
+      }
+      html+='</div>';
     });
     html+='</div>';
   }
@@ -793,6 +872,87 @@ function renderLife(){
 
 function renderFitness(){
   var html='<div class="sec">';
+  // Character + coin jar
+  html+='<div class="fit-hero" id="fitArea">';
+  html+='<div class="fit-char-wrap" id="fitChar">';
+  html+='<div class="char-3d">';
+  html+='<svg viewBox="0 0 100 140" width="80" height="120">';
+  // 阴影地面
+  html+='<ellipse cx="50" cy="132" rx="28" ry="4" fill="#000" opacity="0.12">';
+  html+='<animate attributeName="rx" values="28;30;28" dur="2s" repeatCount="indefinite"/>';
+  html+='</ellipse>';
+  // 头发后片
+  html+='<path d="M22 30 Q18 12 50 14 Q82 12 78 32 Q76 22 50 22 Q24 22 22 30 Z" fill="#5D4037">';
+  html+='<animateTransform attributeName="transform" type="rotate" values="0 50 30;-3 50 30;0 50 30;3 50 30;0 50 30" dur="4s" repeatCount="indefinite"/>';
+  html+='</path>';
+  // 脸
+  html+='<ellipse cx="50" cy="42" rx="22" ry="24" fill="#FFE0BD">';
+  html+='<animate attributeName="fill" values="#FFE0BD;#FFEACE;#FFE0BD" dur="3s" repeatCount="indefinite"/>';
+  html+='</ellipse>';
+  // 头发前片
+  html+='<path d="M28 30 Q30 16 50 16 Q70 16 72 30 Q70 26 60 28 Q50 24 40 28 Q30 26 28 30 Z" fill="#6D4C41"/>';
+  // 蝴蝶结
+  html+='<g transform="translate(70,18)">';
+  html+='<ellipse cx="-4" cy="0" rx="5" ry="4" fill="#FF6B9D" transform="rotate(-20)"/>';
+  html+='<ellipse cx="4" cy="0" rx="5" ry="4" fill="#FF6B9D" transform="rotate(20)"/>';
+  html+='<circle cx="0" cy="0" r="2.5" fill="#E91E63"/>';
+  html+='</g>';
+  // 眼睛（带眨眼）
+  html+='<ellipse cx="42" cy="44" rx="3.5" ry="4" fill="#333"><animate attributeName="ry" values="4;0.4;4;4;4" keyTimes="0;0.04;0.08;0.5;1" dur="4s" repeatCount="indefinite"/></ellipse>';
+  html+='<ellipse cx="58" cy="44" rx="3.5" ry="4" fill="#333"><animate attributeName="ry" values="4;4;4;0.4;4" keyTimes="0;0.4;0.45;0.49;0.55" dur="4s" repeatCount="indefinite"/></ellipse>';
+  html+='<circle cx="43" cy="43" r="1.2" fill="white"/>';
+  html+='<circle cx="59" cy="43" r="1.2" fill="white"/>';
+  // 腮红
+  html+='<ellipse cx="36" cy="50" rx="5" ry="3" fill="#FFB0B0" opacity="0.5"><animate attributeName="opacity" values="0.5;0.7;0.5" dur="2.5s" repeatCount="indefinite"/></ellipse>';
+  html+='<ellipse cx="64" cy="50" rx="5" ry="3" fill="#FFB0B0" opacity="0.5"><animate attributeName="opacity" values="0.5;0.7;0.5" dur="2.5s" repeatCount="indefinite"/></ellipse>';
+  // 嘴（微笑）
+  html+='<path d="M45 53 Q50 57 55 53" fill="none" stroke="#C2185B" stroke-width="1.8" stroke-linecap="round"/>';
+  // 脖子
+  html+='<rect x="45" y="65" width="10" height="6" fill="#FFE0BD"/>';
+  // 运动上衣（粉色）
+  html+='<rect x="32" y="70" width="36" height="32" rx="10" fill="#FF6B9D">';
+  html+='<animate attributeName="fill" values="#FF6B9D;#FF8FB1;#FF6B9D" dur="1.8s" repeatCount="indefinite"/>';
+  html+='</rect>';
+  // 上衣高光
+  html+='<path d="M38 76 Q42 84 38 96" fill="none" stroke="#FFB0CC" stroke-width="2" opacity="0.6"/>';
+  // 左手（持哑铃）
+  html+='<g transform="translate(20,82)">';
+  html+='<animateTransform attributeName="transform" type="rotate" values="0 32 0;-15 32 0;0 32 0;15 32 0;0 32 0" dur="2s" repeatCount="indefinite"/>';
+  html+='<rect x="0" y="0" width="14" height="6" rx="3" fill="#FFDAB9"/>';
+  html+='<rect x="-3" y="-3" width="6" height="12" rx="2" fill="#90A4AE"/>';
+  html+='<rect x="-3" y="-1" width="3" height="8" fill="#546E7A"/>';
+  html+='<rect x="14" y="-3" width="6" height="12" rx="2" fill="#90A4AE"/>';
+  html+='<rect x="17" y="-1" width="3" height="8" fill="#546E7A"/>';
+  html+='</g>';
+  // 右手（持哑铃）
+  html+='<g transform="translate(80,82)">';
+  html+='<animateTransform attributeName="transform" type="rotate" values="0 -32 0;15 -32 0;0 -32 0;-15 -32 0;0 -32 0" dur="2s" repeatCount="indefinite"/>';
+  html+='<rect x="-14" y="0" width="14" height="6" rx="3" fill="#FFDAB9"/>';
+  html+='<rect x="-3" y="-3" width="6" height="12" rx="2" fill="#90A4AE"/>';
+  html+='<rect x="0" y="-1" width="3" height="8" fill="#546E7A"/>';
+  html+='<rect x="-20" y="-3" width="6" height="12" rx="2" fill="#90A4AE"/>';
+  html+='<rect x="-20" y="-1" width="3" height="8" fill="#546E7A"/>';
+  html+='</g>';
+  // 运动短裤
+  html+='<rect x="34" y="100" width="32" height="14" rx="6" fill="#37474F"/>';
+  // 腿
+  html+='<rect x="38" y="112" width="6" height="16" rx="3" fill="#FFE0BD"/>';
+  html+='<rect x="56" y="112" width="6" height="16" rx="3" fill="#FFE0BD"/>';
+  // 鞋子
+  html+='<ellipse cx="41" cy="128" rx="6" ry="3" fill="#FF6B9D"/>';
+  html+='<ellipse cx="59" cy="128" rx="6" ry="3" fill="#FF6B9D"/>';
+  // 头顶汗水/星星
+  html+='<g opacity="0.9">';
+  html+='<text x="14" y="22" font-size="10" fill="#FFD700">✨<animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/></text>';
+  html+='<text x="86" y="34" font-size="9" fill="#4FC3F7">💧<animate attributeName="opacity" values="0;1;0" dur="2.5s" begin="1s" repeatCount="indefinite"/></text>';
+  html+='</g>';
+  html+='</svg>';
+  html+='</div>';
+  html+='</div>';
+  html+='<div class="coin-jar-wrap" id="coinJarWrap">';
+  html+='<svg viewBox="0 0 60 70" width="45" height="52"><rect x="8" y="15" width="44" height="40" rx="6" fill="#FFF9C4" stroke="#FFA000" stroke-width="2"/><rect x="12" y="8" width="36" height="10" rx="4" fill="#FFA000"/><rect x="22" y="5" width="16" height="5" rx="2" fill="#E65100"/><rect x="15" y="30" width="30" height="5" rx="2" fill="#FFD54F" opacity="0.8"/><rect x="18" y="38" width="24" height="5" rx="2" fill="#FFD54F" opacity="0.8"/><rect x="20" y="46" width="20" height="5" rx="2" fill="#FFD54F" opacity="0.8"/></svg>';
+  html+='<div class="coin-jar-count" id="coinJarCount">🪙 '+(S.fitCoins||0)+'</div>';
+  html+='</div></div>';
   html+='<div class="sec-title">📏 身体数据</div>';
   html+='<div class="summary-card"><div class="row mb-8"><input class="input" id="inHeight" type="number" placeholder="身高(cm)"><input class="input" id="inWeight" type="number" placeholder="体重(kg)"></div>';
   html+='<button class="btn-sm primary w-full" onclick="addWeight()">记录体重</button>';
@@ -801,18 +961,18 @@ function renderFitness(){
     S.weight.forEach(function(r,i){
       var diff=i===0?'--':((r.diff>0?'+':'')+r.diff+'kg');
       var dc=i===0?'#8B7D72':(r.diff<0?'#7BC67E':'#FF6B6B');
-      html+='<div class="flex mb-6" style="align-items:center;font-size:12px;border-bottom:1px solid #F5EDE0;padding:8px 0"><span style="width:80px">'+r.date+'</span><span class="fw-700" style="width:80px">'+r.w+'kg</span><span style="width:80px">BMI '+(r.bmi||'-')+'</span><span style="color:'+dc+'">'+diff+'</span></div>';
+      html+='<div class="flex mb-6" style="align-items:center;font-size:12px;border-bottom:1px solid #F5EDE0;padding:8px 0"><span style="width:70px">'+r.date+'</span><span class="fw-700" style="width:70px">'+r.w+'kg</span><span style="width:50px">BMI '+(r.bmi||'-')+'</span><span style="width:45px;color:'+(r.bmiCatColor||'#999')+';font-weight:600;font-size:11px">'+(r.bmiCat||'')+'</span><span style="color:'+dc+'">'+diff+'</span></div>';
     });
     html+='</div>';
   }
   html+='</div>';
   html+='<div class="sec-title">🏃 今日运动</div><div class="summary-card">';
   html+='<div class="row mb-8"><input class="input" id="inEx" placeholder="运动方式"><input class="input" id="inDur" type="number" placeholder="分钟"></div>';
-  html+='<button class="btn-sm primary w-full" onclick="addExer()">+ 记录运动</button>';
+  html+='<button class="btn-sm primary w-full" onclick="confirmExer()">+ 记录运动</button>';
   var totEx=0;S.exer.forEach(function(e){totEx+=e.dur;});
   if(totEx>0)html+='<div class="fw-700 mt-12" style="color:#FFD1DC">合计 '+totEx+' 分钟</div>';
-  S.exer.forEach(function(e){
-    html+='<div class="flex mt-8" style="align-items:center;font-size:13px;border-bottom:1px solid #F5EDE0;padding:8px 0"><span class="fw-700 flex-1">'+e.name+'</span><span class="text-sub">'+e.dur+'分钟</span><span class="text-sub" style="margin-left:12px">'+e.time+'</span></div>';
+  S.exer.forEach(function(e,i){
+    html+='<div class="ex-item flex mt-8" style="align-items:center;font-size:13px;border-bottom:1px solid #F5EDE0;padding:8px 0"><span class="fw-700 flex-1">'+e.name+'</span><span class="text-sub">'+e.dur+'分钟</span><span class="text-sub" style="margin-left:12px">'+e.time+'</span><span class="ex-del" onclick="delExer('+i+')">✕</span></div>';
   });
   html+='</div>';
   html+='<div class="sec-title">📋 生活习惯</div><div class="summary-card">';
@@ -846,10 +1006,27 @@ function renderQuest(){
 function renderHistory(){
   var html='<div class="sec"><div class="sec-title">📋 完成历史</div>';
   if(S.history.length===0)html+='<div class="text-sub fs-14 tac" style="padding:40px">暂无完成记录</div>';
-  S.history.forEach(function(h){
-    html+='<div class="h-item"><div class="h-dot h-dot-'+h.cat+'"></div><div class="flex-1"><span class="fw-700" style="font-size:14px">'+h.title+'</span></div><span class="fs-12 text-sub">'+h.time+'</span></div>';
-  });
-  if(S.history.length>0)html+='<button class="btn-sm ghost w-full mt-12" onclick="clearHistory()">清空历史</button>';
+  else{
+    var groups={};var order=[];
+    S.history.forEach(function(h){
+      var d=h.time.split(' ')[0];
+      if(!groups[d]){groups[d]=[];order.push(d);}
+      groups[d].push(h);
+    });
+    order.forEach(function(d,gi){
+      var cnt=groups[d].length;
+      var isOpen=gi===0;
+      html+='<div class="h-date-folder'+(isOpen?' open':'')+'">';
+      html+='<div class="h-date-header" onclick="this.parentElement.classList.toggle(\'open\')"><span>📅 '+d+'</span><span style="font-size:12px;color:#999">'+cnt+' 条</span><span class="h-date-arrow">▶</span></div>';
+      html+='<div class="h-date-body">';
+      groups[d].forEach(function(h){
+        html+='<div class="h-item"><div class="h-dot h-dot-'+h.cat+'"></div><div class="flex-1"><span class="fw-700" style="font-size:14px">'+h.title+'</span></div><span class="fs-12 text-sub">'+h.time.split(' ')[1]+'</span></div>';
+      });
+      html+='</div></div>';
+    });
+    html+='<button class="btn-sm ghost w-full mt-12" onclick="clearHistory()">清空历史</button>';
+    html+='<button class="btn-sm ghost w-full mt-4" style="color:#e74c3c" onclick="resetAllData()">重置所有数据</button>';
+  }
   html+='</div>';
   return html;
 }
@@ -1056,25 +1233,102 @@ function addHmForm(){
   S.life.push({id:'t'+(S.tidCtr++),title:n,meta:f, tag:'tag-life',done:false,at:''});
   saveState();render();
 }
+function dropFitCoin(qty){
+  qty = qty || 1;
+  var area = document.getElementById('fitArea');
+  var jarEl = document.getElementById('coinJarWrap');
+  if(!area || !jarEl) return;
+  var areaRect = area.getBoundingClientRect();
+  var jarRect = jarEl.getBoundingClientRect();
+  var jarCX = jarRect.left + jarRect.width/2 - areaRect.left;
+  var jarCY = jarRect.top + jarRect.height/2 - areaRect.top;
+  // bounce character
+  var charEl = document.getElementById('fitChar');
+  if(charEl){ charEl.classList.add('bounce'); setTimeout(function(){ charEl.classList.remove('bounce'); },400); }
+  for(var i = 0; i < qty; i++){
+    (function(delay){
+      setTimeout(function(){
+        var coin = document.createElement('div');
+        coin.className = 'coin-particle';
+        coin.textContent = '🪙';
+        var sx = Math.random()*100 - 30;
+        var sy = -Math.random()*40 - 10;
+        coin.style.left = (areaRect.width/2 + sx) + 'px';
+        coin.style.top = (areaRect.height/2 + sy) + 'px';
+        var mx = (jarCX - areaRect.width/2 - sx)*0.5;
+        var my = (jarCY - areaRect.height/2 - sy)*0.5;
+        coin.style.setProperty('--mx', mx + 'px');
+        coin.style.setProperty('--my', my + 'px');
+        coin.style.setProperty('--tx', (jarCX - areaRect.width/2 - sx) + 'px');
+        coin.style.setProperty('--ty', (jarCY - areaRect.height/2 - sy) + 'px');
+        area.appendChild(coin);
+        setTimeout(function(){ coin.remove(); },750);
+      }, delay);
+    })(i*120);
+  }
+  // shake jar
+  setTimeout(function(){
+    jarEl.classList.add('shake');
+    setTimeout(function(){ jarEl.classList.remove('shake'); },400);
+  }, qty*120);
+  S.fitCoins = (S.fitCoins||0) + qty;
+  var countEl = document.getElementById('coinJarCount');
+  if(countEl) countEl.textContent = '🪙 '+S.fitCoins;
+  saveState();
+}
+
 function addWeight(){
   var w=parseFloat(document.getElementById('inWeight').value);
   var h=parseFloat(document.getElementById('inHeight').value);
   if(isNaN(w)||w<=0){showToast('请输入有效体重');return;}
   var d=new Date();var dt=(d.getMonth()+1)+'/'+d.getDate();
   var bmi=isNaN(h)?'':(w/Math.pow(h/100,2)).toFixed(1);
+  var bmiCat='';var bmiCatColor='#999';
+  if(bmi!==''){
+    var bmiV=parseFloat(bmi);
+    if(bmiV<18.5){bmiCat='偏瘦';bmiCatColor='#F9A825';}
+    else if(bmiV<24){bmiCat='正常';bmiCatColor='#4CAF50';}
+    else if(bmiV<28){bmiCat='超重';bmiCatColor='#FF9800';}
+    else{bmiCat='肥胖';bmiCatColor='#E53935';}
+  }
   var prev=S.weight.length>0?S.weight[S.weight.length-1].w:w;
-  S.weight.push({date:dt,w:w,bmi:bmi,diff:(w-prev).toFixed(1)});
-  addXP(3);saveState();render();
+  S.weight.push({date:dt,w:w,bmi:bmi,diff:(w-prev).toFixed(1),bmiCat:bmiCat,bmiCatColor:bmiCatColor});
+  addXP(3);dropFitCoin(1);saveState();render();
 }
-function addExer(){
+
+function confirmExer(){
   var n=document.getElementById('inEx').value.trim();
   var d=parseInt(document.getElementById('inDur').value);
   if(!n||!d){showToast('请输入运动方式和时长');return;}
-  S.exer.push({name:n,dur:d,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
-  S.mDone.f=true;addXP(5);saveState();render();
+  var ov=document.getElementById('exConfirmOverlay');
+  document.getElementById('excDetail').innerHTML='运动方式：<span>'+escHtml(n)+'</span><br>运动时长：<span>'+d+' 分钟</span>';
+  ov.classList.add('show');
+  ov._pending={name:n,dur:d};
+}
+function addExer(){
+  var ov=document.getElementById('exConfirmOverlay');
+  var p=ov._pending;if(!p)return;
+  ov.classList.remove('show');ov._pending=null;
+  S.exer.push({name:p.name,dur:p.dur,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+  S.mDone.f=true;addXP(5);
+  var exCount=S.exer.length,totMin=0;
+  S.exer.forEach(function(e){totMin+=e.dur;});
+  var mult=1;
+  if(exCount>2&&totMin>50)mult=2.5;
+  else if(exCount>2)mult=1.5;
+  else if(totMin>50)mult=2;
+  dropFitCoin(Math.round(mult));
+  saveState();render();
+}
+function cancelExer(){
+  var ov=document.getElementById('exConfirmOverlay');
+  ov.classList.remove('show');ov._pending=null;
+}
+function delExer(i){
+  S.exer.splice(i,1);saveState();render();
 }
 function adjHabit(id,d){
-  S.habits[id]=Math.max(0,(S.habits[id]||0)+d);saveState();render();
+  S.habits[id]=Math.max(0,(S.habits[id]||0)+d);if(d>0)dropFitCoin(1);saveState();render();
 }
 function adjHobby(id,d){
   S.hobbies.forEach(function(h){if(h.id===id)h.cnt=Math.max(0,h.cnt+d);});
@@ -1082,6 +1336,7 @@ function adjHobby(id,d){
 }
 function adjCH(id,d){
   S.customHabits.forEach(function(ch){if(ch.id===id)ch.cnt=Math.max(0,ch.cnt+d);});
+  if(d>0)dropFitCoin(1);
   saveState();render();
 }
 function addHobby(){
@@ -1128,6 +1383,14 @@ function editCH(id){
 }
 function clearHistory(){
   if(confirm('确定清空所有历史记录？')){S.history=[];saveState();render();}
+}
+function resetAllData(){
+  if(confirm('确定重置所有数据？此操作不可撤销，将清空全部课程、任务、历史、成就等。')){
+    localStorage.removeItem('wb_state_v4');
+    initDefaults();
+    saveState();
+    render();
+  }
 }
 function scanCourse(){
   var inp=document.createElement('input');
@@ -1537,6 +1800,7 @@ function doSchedule(force){
     if(hadItems){
       showToast('本轮全部完成，已自动进入下一轮');
       S.learn = [];
+      S.fixedPerDay = null;
       return doSchedule(true);
     }
     return false;
@@ -1554,7 +1818,13 @@ function doSchedule(force){
     totalRemaining += it.round;
     if(doneIds[it.id]) totalRemaining--; // already consumed one slot this round
   });
-  var perDay = Math.ceil(totalRemaining / daysLeft);
+  // Stable perDay: compute once per scheduling cycle, slight front-load (early more, late less)
+  if(!S.fixedPerDay) {
+    var frontLoadDays = Math.max(daysLeft - Math.floor(daysLeft * 0.15), 1);
+    S.fixedPerDay = Math.ceil(totalRemaining / frontLoadDays);
+    S.fixedPerDay = Math.max(S.fixedPerDay, 1);
+  }
+  var perDay = S.fixedPerDay;
   var batch = items.slice(0, perDay);
   S.learn = [];
   batch.forEach(function(it){
@@ -1573,6 +1843,7 @@ function resetAllRounds(){
   if(!confirm('将所有课程的轮数重置为第1轮？')) return;
   S.lmList.forEach(function(it){ it.round = 1; });
   S.learn = [];
+  S.fixedPerDay = null;
   saveState();
   showToast('已重置全部 '+S.lmList.length+' 门课程轮数为第1轮');
   doSchedule(true);
@@ -1606,5 +1877,8 @@ S.lmList.forEach(function(it){ if(!it.round||it.round<=0){ it.round=1; fixedRoun
 if(fixedRounds) saveState();
 render();
 </script>
+<div class="bottom-bar">
+  <button onclick="if(confirm('确定要重置所有数据吗？此操作不可恢复！')){localStorage.removeItem('wb_state_v4');initDefaults();saveState();render();}">重置所有数据</button>
+</div>
 </body>
 </html>
