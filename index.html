@@ -415,6 +415,13 @@ function initDefaults(){
     {id:'lm'+(S.tidCtr++),s:'英语',ch:'词汇核心2000词',h:40,cat:'课程',dl:'',round:1},
     {id:'lm'+(S.tidCtr++),s:'政治',ch:'马原第1-4章',h:12,cat:'课程',dl:'',round:1}
   ];
+  // 默认今日任务关联默认课程（删除课程时可同步清理）
+  S.learn.forEach(function(t){
+    if(!t.lmId && /^l[0-9]+$/.test(t.id)){
+      var sub = t.title.indexOf('民法')>=0 ? '民法' : t.title.indexOf('英语')>=0 ? '英语' : t.title.indexOf('政治')>=0 ? '政治' : null;
+      if(sub){ var lm = S.lmList.find(function(x){ return x.s===sub; }); if(lm) t.lmId = lm.id; }
+    }
+  });
   S.wmList = [
     {name:'请拨单：志愿服务经费',dl:'8/6',p:'urgent'},
     {name:'收文[2026]38号回复',dl:'8/7',p:'urgent'}
@@ -429,6 +436,22 @@ function fixLmIds(){
   S.lmList.forEach(function(it){ if(!it.id){ it.id='lm'+(S.tidCtr++); fixed=true; } });
   return fixed;
 }
+function fixLearnLmIds(){
+  var changed = false;
+  S.learn = S.learn.filter(function(t){
+    if(t.lmId) return true;
+    if(/^l[0-9]+$/.test(t.id)){
+      var sub = t.title.indexOf('民法')>=0 ? '民法' : t.title.indexOf('英语')>=0 ? '英语' : t.title.indexOf('政治')>=0 ? '政治' : null;
+      if(sub){
+        var lm = S.lmList.find(function(x){ return x.s===sub; });
+        if(lm){ t.lmId = lm.id; changed = true; return true; }
+      }
+      changed = true; return false;
+    }
+    return true;
+  });
+  return changed;
+}
 function loadState(){
   try{
     var raw = localStorage.getItem('wb_state_v4');
@@ -439,6 +462,7 @@ function loadState(){
     }else{initDefaults();}
   }catch(e){initDefaults();}
   if(fixLmIds()) saveState();
+  if(fixLearnLmIds()) saveState();
 }
 function saveState(){
   localStorage.setItem('wb_state_v4',JSON.stringify(S));
@@ -506,6 +530,7 @@ function loadFromCloud(){
         if(remoteTs > localTs){
           Object.keys(remote).forEach(function(k){S[k]=remote[k];});
           fixLmIds();
+          fixLearnLmIds();
           saveState();
           document.getElementById('syncText').textContent='已从云端同步最新数据';
           setTimeout(function(){updateSyncUI();},2000);
