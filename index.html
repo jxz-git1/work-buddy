@@ -340,6 +340,10 @@ body{
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="fw-700 mb-12" style="font-size:17px">📷 OCR 识别结果</div>
     <div class="ocr-status" id="ocrStatus"></div>
+    <div class="flex gap-8 mb-8" id="ocrSelectBar" style="display:none">
+      <button class="btn-sm outline flex-1" onclick="selectAllOCR()">全选</button>
+      <button class="btn-sm outline flex-1" onclick="deselectAllOCR()">取消全选</button>
+    </div>
     <div class="ocr-modal" id="ocrList"></div>
     <div class="flex gap-12 mt-16">
       <button class="btn btn-ghost" onclick="cancelOCR()">取消</button>
@@ -734,7 +738,7 @@ function renderLearn(){
     html+='<input type="text" id="linkInput" placeholder="粘贴B站视频链接或网盘链接">';
     html+='<button class="btn-sm primary w-full" onclick="parseLink()">🔗解析链接</button>';
     html+='<div class="link-result" id="linkResult"><div><span class="course-name" id="parsedCourseName"></span><span id="ndTag"></span><button class="link-edit-btn" id="linkEditBtn" style="display:none" onclick="editParsedName()">✏️ 修改</button></div><div class="link-url" id="parsedLinkUrl"></div></div>';
-    html+='<div class="episode-panel" id="episodePanel" style="display:none;margin-top:8px;border:1px solid #e8e8e8;border-radius:8px;padding:8px;max-height:240px;overflow-y:auto"><div class="fs-12 fw-700 mb-4" style="color:#666">📺 分集列表</div><div id="episodeList"></div><div class="flex gap-8 mt-8"><button class="btn-sm primary flex-1" id="btnImportAll" onclick="importAllEpisodes()">📥 全部录入</button><button class="btn-sm outline flex-1" id="btnImportSel" onclick="importSelectedEpisodes()">📥 录入所选</button></div></div>';
+    html+='<div class="episode-panel" id="episodePanel" style="display:none;margin-top:8px;border:1px solid #e8e8e8;border-radius:8px;padding:8px;max-height:240px;overflow-y:auto"><div class="fs-12 fw-700 mb-4" style="color:#666">📺 分集列表</div><div id="episodeList"></div><div class="flex gap-8 mt-6"><button class="btn-sm outline flex-1" onclick="selectAllEp()">全选</button><button class="btn-sm outline flex-1" onclick="deselectAllEp()">取消全选</button></div><div class="flex gap-8 mt-8"><button class="btn-sm primary flex-1" id="btnImportAll" onclick="importAllEpisodes()">📥 全部录入</button><button class="btn-sm outline flex-1" id="btnImportSel" onclick="importSelectedEpisodes()">📥 录入所选</button></div></div>';
     html+='</div>';
     html+='<button class="btn-sm primary w-full mb-8" onclick="openCatModal(\'manual\')">+ 手动添加章节</button>';
     html+='<div class="flex gap-8 mt-12 mb-8"><button class="btn-sm outline flex-1" onclick="scanCourse()">📷 拍照</button><button class="btn-sm outline flex-1" onclick="choosePhoto()">🖼 相册</button></div>';
@@ -1492,10 +1496,13 @@ function parseOCRText(text){
 }
 function renderOCRResults(){
   var el=document.getElementById('ocrList');
+  document.getElementById('ocrSelectBar').style.display = S._ocrLines.length>0 ? 'flex' : 'none';
   el.innerHTML=S._ocrLines.map(function(item,i){
     return '<div class="ocr-row"><div class="ocr-raw">原文: '+item.raw+'</div><input type="checkbox" '+(item.checked?'checked':'')+' onchange="S._ocrLines['+i+'].checked=this.checked"><input type="text" placeholder="科目" value="'+item.subject.replace(/"/g,'&quot;')+'" onchange="S._ocrLines['+i+'].subject=this.value"><input type="text" placeholder="章节" value="'+item.chapter.replace(/"/g,'&quot;')+'" onchange="S._ocrLines['+i+'].chapter=this.value"><input type="number" placeholder="时长(h)" min="0.5" step="0.5" value="1" onchange="S._ocrLines['+i+'].hours=parseFloat(this.value)||1"></div>';
   }).join('');
 }
+function selectAllOCR(){ S._ocrLines.forEach(function(x){x.checked=true;}); renderOCRResults(); }
+function deselectAllOCR(){ S._ocrLines.forEach(function(x){x.checked=false;}); renderOCRResults(); }
 function confirmOCR(){
   var added=0;
   S._ocrLines.forEach(function(item,i){
@@ -1708,6 +1715,8 @@ function formatFileSize(bytes){
   return (bytes/1073741824).toFixed(2)+'GB';
 }
 
+function selectAllEp(){ document.querySelectorAll('#episodeList .ep-cb').forEach(function(cb){cb.checked=true;}); }
+function deselectAllEp(){ document.querySelectorAll('#episodeList .ep-cb').forEach(function(cb){cb.checked=false;}); }
 function importAllEpisodes(){
   var bData = window._bilibiliData;
   var cData = window._cloudData;
