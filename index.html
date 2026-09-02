@@ -6,6 +6,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#FFB380">
 <title>Work Buddy</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Work Buddy">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -1915,5 +1920,19 @@ render();
 <div class="bottom-bar">
   <button onclick="if(confirm('确定要重置所有数据吗？此操作不可恢复！')){localStorage.removeItem('wb_state_v4');initDefaults();saveState();render();}">重置所有数据</button>
 </div>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    var refreshing=false;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      if(refreshing)return; refreshing=true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      reg.update();
+    }).catch(function(){});
+  });
+}
+</script>
 </body>
 </html>
