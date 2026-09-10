@@ -814,7 +814,10 @@ function renderLearn(){
     });
     html+='</div>';
   }
-  html+='<div class="sec-title">🌱 今日学习</div>';
+  var learnTodo=S.learn.filter(function(t){return !t.done;}).length;
+  var learnDone=S.learn.length-learnTodo;
+  html+='<div class="sec-title">🌱 今日学习 <span style="font-size:11px;font-weight:700;background:#FFF3E0;color:#E65100;padding:2px 8px;border-radius:10px;vertical-align:middle">'+(S.learn.length>0&&learnTodo===0?'✅ 已全部完成':'需完成 '+learnTodo+' 项')+'</span></div>';
+  html+='<div class="fs-11 text-sub" style="margin:2px 0 8px">今日共 '+S.learn.length+' 项 · 已完成 '+learnDone+' 项 · 待完成 '+learnTodo+' 项</div>';
   S.learn.forEach(function(t,i){
     html+='<div class="task'+(t.done?' done':'')+'">'+
       '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleLearn('+i+')">✓</div>'+
