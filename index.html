@@ -1169,10 +1169,23 @@ function confirmCatModal(){
     var round = roundEl ? parseInt(roundEl.value)||1 : 1;
     var qEl = document.getElementById('cmQtype');
     var qtype = qEl ? qEl.value : '';
+    // 增量导入：按 科目+章节名 去重，只录入尚未存在的章节，已存在章节跳过，不影响其轮数与学习进度
+    var existKeys = {};
+    S.lmList.forEach(function(x){ existKeys[x.s+'|'+x.ch]=true; });
+    var added=0, skipped=0;
     items.forEach(function(ep){
-      S.lmList.push({id:'lm'+(S.tidCtr++), s:_catModal.subject, ch:ep.title||ep.part||'章节', h:ep.h||_catModal.hours, cat:_catModal.category, dl:_catModal.deadline, round:round, qtype:qtype});
+      var title = (ep.title||ep.part||'章节').toString().trim();
+      var key = _catModal.subject + '|' + title;
+      if(existKeys[key]){ skipped++; return; }
+      existKeys[key]=true;
+      S.lmList.push({id:'lm'+(S.tidCtr++), s:_catModal.subject, ch:title, h:ep.h||_catModal.hours, cat:_catModal.category, dl:_catModal.deadline, round:round, qtype:qtype});
+      added++;
     });
-    showToast('已录入 '+items.length+' 个章节（每章'+round+'轮）');
+    if(added>0){
+      showToast('新增 '+added+' 个章节'+(skipped>0?'（已跳过 '+skipped+' 个重复章节，不影响原有进度）':''));
+    } else {
+      showToast('本次无新增章节：'+items.length+' 个章节此前均已录入'+(skipped>0?'（跳过重复）':''));
+    }
     // clear episode panel
     var epPanel = document.getElementById('episodePanel');
     if(epPanel) epPanel.style.display = 'none';
