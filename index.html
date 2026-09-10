@@ -1812,13 +1812,11 @@ function interleaveCat(cat, byCat, result){
     if(SUBJ_ORDER.indexOf(s)===-1 && groups[s].length>0) subjList.push(s);
   }
   if(subjList.length===0) return;
-  var maxCh = 0;
-  subjList.forEach(function(s){maxCh=Math.max(maxCh,groups[s].length);});
-  for(var i=0;i<maxCh;i++){
-    subjList.forEach(function(s){
-      if(i<groups[s].length) result.push(groups[s][i]);
-    });
-  }
+  // Subject-sequential: each subject's chapters (already sorted asc) as one block,
+  // finish one subject entirely before moving to the next subject
+  subjList.forEach(function(s){
+    groups[s].forEach(function(it){ result.push(it); });
+  });
 }
 
 function doSchedule(force){
