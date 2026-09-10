@@ -1812,11 +1812,34 @@ function interleaveCat(cat, byCat, result){
     if(SUBJ_ORDER.indexOf(s)===-1 && groups[s].length>0) subjList.push(s);
   }
   if(subjList.length===0) return;
-  // Subject-sequential: each subject's chapters (already sorted asc) as one block,
-  // finish one subject entirely before moving to the next subject
-  subjList.forEach(function(s){
-    groups[s].forEach(function(it){ result.push(it); });
-  });
+  if(subjList.length===1){
+    // Single subject only: output its chapters as one block
+    groups[subjList[0]].forEach(function(it){ result.push(it); });
+    return;
+  }
+  // Dual-subject parallel: keep two active subject slots and interleave their
+  // chapters (each subject stays in chapter-asc order). When a subject finishes
+  // its current round, the next pending subject takes over that slot immediately,
+  // so the two tracks advance independently without waiting for each other.
+  var pending = subjList.map(function(s){ return {name:s, pos:0, chs:groups[s]}; });
+  var slot0 = pending.shift();
+  var slot1 = pending.shift();
+  while(true){
+    var took = false;
+    if(slot0 && slot0.pos < slot0.chs.length){
+      result.push(slot0.chs[slot0.pos++]); took = true;
+    } else if(slot0){
+      slot0 = pending.length ? pending.shift() : null;
+      if(slot0) continue;
+    }
+    if(slot1 && slot1.pos < slot1.chs.length){
+      result.push(slot1.chs[slot1.pos++]); took = true;
+    } else if(slot1){
+      slot1 = pending.length ? pending.shift() : null;
+      if(slot1) continue;
+    }
+    if(!took) break;
+  }
 }
 
 function doSchedule(force){
