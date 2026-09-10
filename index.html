@@ -731,6 +731,18 @@ function renderContent(){
 
 function renderLearn(){
   if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule();
+  // 按当前学习进度动态计算未完成任务的预计完成时间：从当前时刻起，
+  // 依未完成任务排列顺序累加各自预计时长；已完成任务保留实际完成时间
+  var nowD = new Date(); var accH = 0;
+  S.learn.forEach(function(t){
+    if(t.done) return;
+    var m = /预计([\d.]+)h/.exec(t.meta||'');
+    if(!m) return; // 无预计时长的任务不显示预计完成时间
+    var h = parseFloat(m[1])||0;
+    accH += h;
+    var d = new Date(nowD.getTime() + accH*3600000);
+    t.expAt = d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+  });
   var html='<div class="sec">';
   var all2=S.learn.concat(S.work).concat(S.life);
   var done2=all2.filter(function(t){return t.done;}).length;
