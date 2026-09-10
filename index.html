@@ -830,6 +830,29 @@ function renderLearn(){
   var learnDone=S.learn.length-learnTodo;
   html+='<div class="sec-title">🌱 今日学习 <span style="font-size:11px;font-weight:700;background:#FFF3E0;color:#E65100;padding:2px 8px;border-radius:10px;vertical-align:middle">'+(S.learn.length>0&&learnTodo===0?'✅ 已全部完成':'需完成 '+learnTodo+' 项')+'</span></div>';
   html+='<div class="fs-11 text-sub" style="margin:2px 0 8px">今日共 '+S.learn.length+' 项 · 已完成 '+learnDone+' 项 · 待完成 '+learnTodo+' 项</div>';
+  // 预计完成全部课程总量日期：按今日学习进度 + 每日课程安排估算
+  var remTotal=0, remDoneIds={};
+  S.learn.forEach(function(t){ if(t.done&&t.lmId) remDoneIds[t.lmId]=true; });
+  S.lmList.forEach(function(it){
+    if((it.round||0)<=0) return;
+    remTotal += it.round;
+    if(remDoneIds[it.id]) remTotal--;
+  });
+  var perDayEff = S.fixedPerDay || 0;
+  if(!perDayEff){
+    var d0=new Date(); d0.setHours(0,0,0,0);
+    var dleft = S.examDate? Math.max(1,Math.ceil((new Date(S.examDate+'T00:00:00')-d0)/86400000)) : 0;
+    perDayEff = dleft>0 ? Math.max(1,Math.ceil(remTotal/Math.max(dleft-Math.floor(dleft*0.15),1))) : Math.max(1,remTotal);
+  }
+  var daysNeeded = Math.max(1, Math.ceil(remTotal/Math.max(perDayEff,1)));
+  var fd = new Date(); fd.setHours(0,0,0,0); fd.setDate(fd.getDate()+daysNeeded);
+  var finishStr = fd.getFullYear()+'年'+(fd.getMonth()+1)+'月'+fd.getDate()+'日';
+  var warn='';
+  if(S.examDate){
+    var gap = Math.round((new Date(S.examDate+'T00:00:00') - fd)/86400000);
+    warn = gap>=0 ? ' · 较考试截止提前 '+gap+' 天' : ' · ⚠ 比考试截止晚 '+(-gap)+' 天，需加大每日量';
+  }
+  html+='<div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:12px;padding:8px 12px;margin:0 0 10px;font-size:12px;color:#1B5E20">📅 预计 <b>'+finishStr+'</b> 完成全部课程（剩余 '+remTotal+' 项 · 每日约 '+perDayEff+' 项）'+warn+'</div>';
   var lGroups={};
   S.learn.forEach(function(t,i){
     var sub=t.subj||(t.title&&t.title.indexOf('·')>-1?t.title.split('·')[0]:'待分组');
