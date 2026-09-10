@@ -841,7 +841,7 @@ function renderLearn(){
         var t=x.t,i=x.i;
         html+='<div class="task'+(t.done?' done':'')+'">'+
           '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleLearn('+i+')">✓</div>'+
-          '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':'')+'</div>'+
+          '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':(t.expAt?'<div class="t-at" style="color:#B8860B">预计 '+t.expAt+' 完成</div>':''))+'</div>'+
           '<span class="tag '+t.tag+'">'+(t.tl||'待办')+'</span></div>';
       });
       html+='</div>';
@@ -1942,13 +1942,17 @@ function doSchedule(force){
     bi++;
   }
   S.learn = [];
+  var expBase = new Date(); var expAcc = 0;
   batch.forEach(function(it){
     var catTag = 'tag-must';
     if(it.cat==='习题') catTag = 'tag-opt';
     else if(it.cat==='真题') catTag = 'tag-urgent';
     else if(it.cat==='背诵') catTag = 'tag-opt';
     var typeStr = it.qtype ? ' · '+it.qtype : '';
-    S.learn.push({id:'sched'+(S.tidCtr++), title:it.s+'·'+it.ch+typeStr, meta:it.cat+'|预计'+it.h+'h', tag:catTag, done:false, at:'', lmId:it.id, subj:it.s});
+    expAcc += (parseFloat(it.h)||0);
+    var expD = new Date(expBase.getTime() + expAcc*3600000);
+    var expAt = expD.getHours()+':'+String(expD.getMinutes()).padStart(2,'0');
+    S.learn.push({id:'sched'+(S.tidCtr++), title:it.s+'·'+it.ch+typeStr, meta:it.cat+'|预计'+it.h+'h', tag:catTag, done:false, at:'', lmId:it.id, subj:it.s, expAt:expAt});
   });
   S.scheduledToday = new Date().toDateString();
   return true;
