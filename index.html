@@ -1902,7 +1902,21 @@ function doSchedule(force){
     S.fixedPerDay = Math.max(S.fixedPerDay, 1);
   }
   var perDay = S.fixedPerDay;
-  var batch = items.slice(0, perDay);
+  // 方案A双科目并行保障：存在≥2个科目时，今日批次至少覆盖前2个不同科目（每科≥1项），
+  // 避免 fixedPerDay 较小（任务量少被压到1）时今日只剩单科；仅1个科目时按原 perDay 切分兼容
+  var totalSubj = {};
+  items.forEach(function(ts){ totalSubj[ts.s]=true; });
+  var hasMulti = Object.keys(totalSubj).length >= 2;
+  var batch = [];
+  var coveredN = 0;
+  var coveredMap = {};
+  var bi = 0;
+  while(bi < items.length && (batch.length < perDay || (hasMulti && coveredN < 2))){
+    var bii = items[bi];
+    batch.push(bii);
+    if(!coveredMap[bii.s]){ coveredMap[bii.s]=true; coveredN++; }
+    bi++;
+  }
   S.learn = [];
   batch.forEach(function(it){
     var catTag = 'tag-must';
