@@ -818,11 +818,35 @@ function renderLearn(){
   var learnDone=S.learn.length-learnTodo;
   html+='<div class="sec-title">🌱 今日学习 <span style="font-size:11px;font-weight:700;background:#FFF3E0;color:#E65100;padding:2px 8px;border-radius:10px;vertical-align:middle">'+(S.learn.length>0&&learnTodo===0?'✅ 已全部完成':'需完成 '+learnTodo+' 项')+'</span></div>';
   html+='<div class="fs-11 text-sub" style="margin:2px 0 8px">今日共 '+S.learn.length+' 项 · 已完成 '+learnDone+' 项 · 待完成 '+learnTodo+' 项</div>';
+  var lGroups={};
   S.learn.forEach(function(t,i){
-    html+='<div class="task'+(t.done?' done':'')+'">'+
-      '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleLearn('+i+')">✓</div>'+
-      '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':'')+'</div>'+
-      '<span class="tag '+t.tag+'">'+(t.tl||'待办')+'</span></div>';
+    var sub=t.subj||(t.title&&t.title.indexOf('·')>-1?t.title.split('·')[0]:'待分组');
+    if(!lGroups[sub])lGroups[sub]=[];
+    lGroups[sub].push({t:t,i:i});
+  });
+  _collapses.learnFolders=_collapses.learnFolders||{};
+  Object.keys(lGroups).sort().forEach(function(sub){
+    var items=lGroups[sub];
+    var open=_collapses.learnFolders[sub]!==false;
+    var doneCnt=items.filter(function(x){return x.t.done;}).length;
+    html+='<div class="lm-folder" style="margin-top:10px">';
+    html+='<div class="lm-folder-h" onclick="_collapses.learnFolders[\''+sub.replace(/'/g,"\\'")+'\']=!_collapses.learnFolders[\''+sub.replace(/'/g,"\\'")+'\'];render()" style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:#F0F4FF;border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:#E65100">';
+    html+='<span class="folder-arrow" style="display:inline-block;transition:transform 0.2s;font-size:10px;'+(open?'transform:rotate(90deg)':'')+'">▶</span>';
+    html+='<span>📚 '+sub+'</span>';
+    html+='<span style="font-weight:400;color:#999;font-size:11px;margin-left:auto">'+doneCnt+'/'+items.length+' 完成</span>';
+    html+='</div>';
+    if(open){
+      html+='<div class="lm-folder-body" style="padding-left:4px">';
+      items.forEach(function(x){
+        var t=x.t,i=x.i;
+        html+='<div class="task'+(t.done?' done':'')+'">'+
+          '<div class="t-check'+(t.done?' c':'')+'" onclick="toggleLearn('+i+')">✓</div>'+
+          '<div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+t.meta+'</div>'+(t.done?'<div class="t-at">'+t.at+' 完成</div>':'')+'</div>'+
+          '<span class="tag '+t.tag+'">'+(t.tl||'待办')+'</span></div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
   });
   html+='<div class="tree-card"><div class="tree-emoji">'+(treePct>=100?'🌳':treePct>=60?'🌲':treePct>=30?'🪴':'🌱')+'</div>'+
     '<div class="tree-bar"><div class="tree-fill" style="width:'+treePct+'%"></div></div>'+
@@ -1924,7 +1948,7 @@ function doSchedule(force){
     else if(it.cat==='真题') catTag = 'tag-urgent';
     else if(it.cat==='背诵') catTag = 'tag-opt';
     var typeStr = it.qtype ? ' · '+it.qtype : '';
-    S.learn.push({id:'sched'+(S.tidCtr++), title:it.s+'·'+it.ch+typeStr, meta:it.cat+'|预计'+it.h+'h', tag:catTag, done:false, at:'', lmId:it.id});
+    S.learn.push({id:'sched'+(S.tidCtr++), title:it.s+'·'+it.ch+typeStr, meta:it.cat+'|预计'+it.h+'h', tag:catTag, done:false, at:'', lmId:it.id, subj:it.s});
   });
   S.scheduledToday = new Date().toDateString();
   return true;
