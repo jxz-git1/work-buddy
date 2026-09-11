@@ -1263,6 +1263,7 @@ function delLm(id){
   if(!confirm('确定删除此章节？'))return;
   S.lmList=S.lmList.filter(function(x){return x.id!==id;});
   S.learn=S.learn.filter(function(t){return t.lmId!==id;});
+  S.fixedPerDay=null; // 删除课程后剩余任务量已变，清缓存使每日任务量与预计完成日期按新剩余量重算
   saveState();render();
 }
 
@@ -1325,6 +1326,7 @@ function batchDelLm(){
   checked.forEach(function(cb){ ids.push(cb.value); });
   S.lmList = S.lmList.filter(function(x){ return ids.indexOf(x.id)===-1; });
   S.learn = S.learn.filter(function(t){ return ids.indexOf(t.lmId)===-1; });
+  S.fixedPerDay=null; // 批量删除课程后同样清理每日任务量缓存
   saveState();render();
 }
 function addWmForm(){
