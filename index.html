@@ -1209,6 +1209,8 @@ function confirmCatModal(){
     var qEl = document.getElementById('cmQtype');
     var qtype = qEl ? qEl.value : '';
     S.lmList.push({id:'lm'+(S.tidCtr++), s:_catModal.subject, ch:_catModal.chapter, h:_catModal.hours, cat:_catModal.category, dl:_catModal.deadline, round:1, qtype:qtype});
+    S.fixedPerDay=null; // 新增课程后剩余任务量已变，清缓存使每日任务量与预计完成日期按新总量重算
+    if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule(true);
     showToast('已添加');
   } else if(_catModal.mode==='edit'){
     var item = S.lmList.find(function(x){return x.id===_catModal.editId;});
@@ -1241,6 +1243,8 @@ function confirmCatModal(){
       added++;
     });
     if(added>0){
+      S.fixedPerDay=null; // 增量导入后剩余任务量已变，清缓存使每日任务量与预计完成日期按新总量重算
+      if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule(true);
       showToast('新增 '+added+' 个章节'+(skipped>0?'（已跳过 '+skipped+' 个重复章节，不影响原有进度）':''));
     } else {
       showToast('本次无新增章节：'+items.length+' 个章节此前均已录入'+(skipped>0?'（跳过重复）':''));
@@ -1543,6 +1547,8 @@ function photoToCourse(i){
   var ch=prompt('章节名称','');if(!ch)return;
   var h=parseFloat(prompt('预计时长(h)',''));if(isNaN(h))return;
   S.lmList.push({id:'lm'+(S.tidCtr++),s:s,ch:ch,h:h,round:1,cat:'课程',dl:S.examDate||''});
+  S.fixedPerDay=null; // 新增课程后剩余任务量已变，清缓存使每日任务量与预计完成日期按新总量重算
+  if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule(true);
   saveState();render();
 }
 function delPhoto(i){
@@ -1593,6 +1599,10 @@ function confirmOCR(){
     S.lmList.push({id:'lm'+(S.tidCtr++),s:item.subject,ch:item.chapter,h:h,round:1,cat:'课程',dl:S.examDate||''});
     added++;
   });
+  if(added>0){
+    S.fixedPerDay=null; // 新增课程后剩余任务量已变，清缓存使每日任务量与预计完成日期按新总量重算
+    if(!S.learn.length||S.learn.every(function(t){return t.done;})) doSchedule(true);
+  }
   S._ocrLines=[];
   document.getElementById('ocrModal').style.display='none';
   saveState();render();
