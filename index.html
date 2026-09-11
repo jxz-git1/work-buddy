@@ -1862,6 +1862,17 @@ function extractChapNum(ch){
   return 9999;
 }
 
+// Subject display order == course page folder order (round>0 subjects, name-sorted).
+// Keeps the scheduling subject sequence aligned with how courses are listed on the page.
+function getSubjectDisplayOrder(){
+  var seen = [];
+  S.lmList.forEach(function(it){
+    if((it.round||0)<=0) return;
+    if(seen.indexOf(it.s)===-1) seen.push(it.s);
+  });
+  return seen.sort();
+}
+
 // interleave: category batches, within each category round-robin by subject
 function interleaveItems(items){
   var byCat = {};
@@ -1880,20 +1891,22 @@ function interleaveItems(items){
   }
   var result = [];
   // Process CAT_ORDER first, then remaining categories
-  CAT_ORDER.forEach(function(cat){ interleaveCat(cat, byCat, result); });
+  var subjOrder = getSubjectDisplayOrder();
+  CAT_ORDER.forEach(function(cat){ interleaveCat(cat, byCat, result, subjOrder); });
   for(var cat in byCat){
-    if(CAT_ORDER.indexOf(cat)===-1) interleaveCat(cat, byCat, result);
+    if(CAT_ORDER.indexOf(cat)===-1) interleaveCat(cat, byCat, result, subjOrder);
   }
   return result;
 }
 
-function interleaveCat(cat, byCat, result){
+function interleaveCat(cat, byCat, result, subjOrder){
   var groups = byCat[cat];
   if(!groups) return;
-  // Ordered subjects first, then remaining
-  var subjList = SUBJ_ORDER.filter(function(s){return groups[s]&&groups[s].length>0;});
+  // Ordered subjects first (course-page display order), then remaining
+  var ordered = (subjOrder && subjOrder.length) ? subjOrder : SUBJ_ORDER;
+  var subjList = ordered.filter(function(s){return groups[s]&&groups[s].length>0;});
   for(var s in groups){
-    if(SUBJ_ORDER.indexOf(s)===-1 && groups[s].length>0) subjList.push(s);
+    if(ordered.indexOf(s)===-1 && groups[s].length>0) subjList.push(s);
   }
   if(subjList.length===0) return;
   if(subjList.length===1){
